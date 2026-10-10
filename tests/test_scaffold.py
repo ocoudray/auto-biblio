@@ -4,13 +4,17 @@ from pathlib import Path
 import pytest
 
 from auto_biblio.repo_config.loader import load_repo_config
+from auto_biblio.repo_config.triage import TriageConfig
 from auto_biblio.scaffold import ScaffoldExistsError, scaffold_data_repo
 
 EXPECTED = [
     ".github/workflows/daily.yml",
+    ".github/workflows/weekly.yml",
     ".gitignore",
+    "config/llm.yaml",
     "config/profile.yaml",
     "config/sources.yaml",
+    "config/triage.yaml",
     "state/.gitkeep",
 ]
 
@@ -71,3 +75,29 @@ def test_workflow_commits_state_even_when_collect_fails(tmp_path: Path) -> None:
 def test_gitignore_excludes_interrupted_writes(tmp_path: Path) -> None:
     scaffold_data_repo(tmp_path, "1.2.3")
     assert "*.tmp" in (tmp_path / ".gitignore").read_text().splitlines()
+
+
+def test_scaffolded_triage_config(tmp_path: Path) -> None:
+    scaffold_data_repo(tmp_path, "1.2.3")
+    config = load_repo_config(tmp_path)
+    assert config.triage == TriageConfig()  # the template spells out the defaults
+    llm = config.require_llm()
+    assert [s.id for s in llm.chain("triage")] == [
+        "google:gemini-3.5-flash-lite",
+        "anthropic:claude-haiku-5-5",
+    ]
+
+
+def test_workflows_pin_the_version(tmp_path: Path) -> None:
+    scaffold_data_repo(tmp_path, "1.2.3")
+    daily = (tmp_path / ".github/workflows/daily.yml").read_text()
+    weekly = (tmp_path / ".github/workflows/weekly.yml").read_text()
+    for workflow in (daily, weekly):
+        assert "auto-biblio@v1.2.3" in workflow
+        assert "${{ secrets.GITHUB_TOKEN }}" in workflow
+    assert "auto-biblio signals refresh" in daily
+    assert "auto-biblio feedback ingest" in daily
+    assert "auto-biblio health" in daily
+    assert "issues: write" in daily
+    assert "auto-biblio triage" in weekly
+    assert '${WEEK:+--week "$WEEK"}' in weekly

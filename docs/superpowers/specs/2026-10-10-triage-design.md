@@ -264,14 +264,14 @@ class LLMResult[T: BaseModel](BaseModel):
 ```yaml
 models:
   flash-lite:
-    id: google-gla:gemini-3.5-flash-lite   # identifiant et quota à vérifier à l'implémentation
+    id: google:gemini-3.5-flash-lite       # palier gratuit (vérifié le 2026-10-10)
     input_usd_per_mtok: 0
     output_usd_per_mtok: 0
     batch_size: 20
   haiku:
-    id: anthropic:claude-haiku-…           # identifiant et tarif à vérifier à l'implémentation
-    input_usd_per_mtok: …
-    output_usd_per_mtok: …
+    id: anthropic:claude-haiku-5-5         # tarif vérifié le 2026-10-10
+    input_usd_per_mtok: 0.10
+    output_usd_per_mtok: 0.50
     batch_size: 15
 chains:
   triage: [flash-lite, haiku]

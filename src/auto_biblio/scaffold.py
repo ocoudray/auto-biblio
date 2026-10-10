@@ -11,7 +11,10 @@ _TEMPLATES = files("auto_biblio.scaffold_templates")
 _LAYOUT = {
     "config/profile.yaml": "profile.yaml",
     "config/sources.yaml": "sources.yaml",
+    "config/llm.yaml": "llm.yaml",
+    "config/triage.yaml": "triage.yaml",
     ".github/workflows/daily.yml": "daily.yml",
+    ".github/workflows/weekly.yml": "weekly.yml",
     ".gitignore": "gitignore",
 }
 _KEEP = "state/.gitkeep"

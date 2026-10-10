@@ -1,0 +1,74 @@
+# Template: `auto-biblio init` fills in the version; literal dollar signs are doubled here.
+name: Weekly triage and digest
+
+on:
+  schedule:
+    - cron: "30 5 * * 0"
+  workflow_dispatch:
+    inputs:
+      week:
+        description: "ISO week to triage, e.g. 2026-W41 (default: current)"
+        required: false
+      dry_run:
+        description: "Write the digest instead of mailing it"
+        type: boolean
+        default: false
+
+concurrency:
+  group: auto-biblio
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AUTO_BIBLIO_GITHUB_TOKEN: $${{ secrets.GITHUB_TOKEN }}
+      AUTO_BIBLIO_DATA_REPO: $${{ github.repository }}
+      AUTO_BIBLIO_GEMINI_API_KEY: $${{ secrets.GEMINI_API_KEY }}
+      AUTO_BIBLIO_ANTHROPIC_API_KEY: $${{ secrets.ANTHROPIC_API_KEY }}
+      AUTO_BIBLIO_SMTP_USER: $${{ vars.AUTO_BIBLIO_SMTP_USER }}
+      AUTO_BIBLIO_SMTP_PASSWORD: $${{ secrets.SMTP_PASSWORD }}
+      AUTO_BIBLIO_DIGEST_TO: $${{ vars.AUTO_BIBLIO_DIGEST_TO }}
+      PYDANTIC_AI_NO_BANNER: "1"
+      FASTEMBED_CACHE_PATH: .cache/fastembed
+      WEEK: $${{ inputs.week }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Restore embedding and model caches
+        uses: actions/cache@v4
+        with:
+          path: .cache
+          key: embeddings-$${{ github.run_id }}
+          restore-keys: embeddings-
+      - name: Install auto-biblio
+        run: uv tool install git+https://github.com/ocoudray/auto-biblio@v$version
+      - name: Triage
+        run: auto-biblio triage $${WEEK:+--week "$$WEEK"}
+      - name: Digest
+        run: |
+          if [ "$${{ inputs.dry_run }}" = "true" ]; then
+            auto-biblio digest $${WEEK:+--week "$$WEEK"} --dry-run digest.html
+          else
+            auto-biblio digest $${WEEK:+--week "$$WEEK"}
+          fi
+      - name: Keep the dry-run digest
+        if: $${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest
+          path: digest.html
+      - name: Commit state
+        if: $${{ !cancelled() }}
+        run: |
+          if [ -n "$$(git status --porcelain state)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add state
+            git commit -m "triage: $$(date -u +%G-W%V)"
+            git push
+          fi

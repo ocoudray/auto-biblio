@@ -6,8 +6,10 @@
 
 An automated watch on AI research and engineering. It collects new papers, repositories,
 releases, blog posts and discussions (arXiv, Hugging Face Daily Papers, GitHub, Hacker News,
-RSS), deduplicates them across sources and stores them in a separate data repository. Triage,
-analysis and the weekly digest come in the next sub-projects (see the
+RSS), deduplicates them across sources and stores them in a separate data repository. Every
+week it triages them against your interest profile, with local embeddings and a cheap LLM
+within a budget, and mails a short digest whose 👍/👎 links train the ranking. Analysis and
+the knowledge base come in the next sub-projects (see the
 [vision](docs/superpowers/specs/2026-10-10-auto-biblio-vision-design.md)).
 
 ## Set up
@@ -19,15 +21,17 @@ Two repositories work together:
   state and the GitHub Actions workflow that runs the collection every day.
 
 ```bash
-uv tool install git+https://github.com/ocoudray/auto-biblio@v0.1.1
-auto-biblio init ~/auto-biblio-data          # writes config/, state/, .github/workflows/daily.yml
+uv tool install git+https://github.com/ocoudray/auto-biblio@v0.2.0
+auto-biblio init ~/auto-biblio-data          # writes config/, state/, .github/workflows/
 cd ~/auto-biblio-data && auto-biblio validate-config
 git init -b main && git add -A && git commit -m "chore: init data repository"
 gh repo create <you>/auto-biblio-data --private --source=. --push
 ```
 
-The workflow then runs every day at 05:00 UTC; trigger it by hand from the data repository's
-**Actions → Daily collection → Run workflow**, or run `auto-biblio collect` locally.
+The daily workflow then runs at 05:00 UTC and the weekly one on Sunday at 05:30 UTC; trigger
+them by hand from the data repository's **Actions** tab. The weekly triage needs API keys and
+SMTP credentials: see [Upgrade to 0.2](docs/upgrade-0.2.md) for the secrets to add, and
+[Triage](docs/triage.md) for how items are ranked.
 
 ## How it works
 
@@ -101,14 +105,19 @@ Popularity counters (stars, upvotes, points, comments) are stored separately as 
 auto-biblio-data/
 ├── config/
 │   ├── profile.yaml        themes of interest, keywords, watched repositories
-│   └── sources.yaml        sources to poll and their parameters
+│   ├── sources.yaml        sources to poll and their parameters
+│   ├── llm.yaml            models, fallback chain and weekly budget of the triage
+│   └── triage.yaml         every decision constant of the triage
 ├── state/
 │   ├── items/YYYY-MM.jsonl      deduplicated items, by month first seen, sorted by id
 │   ├── signals/YYYY-MM.jsonl    dated stars / upvotes / points / comments
 │   ├── cursors.json             last successful run of each source
 │   ├── runs/<run>.json          per-source report of each run
-│   └── quarantine/<run>/        payloads a source failed to parse
-└── .github/workflows/daily.yml
+│   ├── quarantine/<run>/        payloads a source failed to parse
+│   ├── triage/YYYY-Www.json     weekly journal: every candidate, its features, verdict and score
+│   ├── feedback/YYYY-MM.jsonl   👍/👎 reactions from the digest
+│   └── llm_cache/               cached LLM answers (re-running a week is free)
+└── .github/workflows/           daily.yml (collection) and weekly.yml (triage and digest)
 ```
 
 Files are written atomically and deterministically (sorted, one JSON object per line), so a
@@ -119,8 +128,7 @@ readable.
 
 - Reddit and Substack feeds may answer `429`/`403` to cloud IPs such as GitHub runners; those
   sources fail in isolation and are reported.
-- Triage against the interest profile, analysis, the knowledge base and the weekly digest are
-  the next sub-projects (see the
+- Analysis of the selected items and the knowledge base are the next sub-projects (see the
   [vision](docs/superpowers/specs/2026-10-10-auto-biblio-vision-design.md)).
 
 ## Develop

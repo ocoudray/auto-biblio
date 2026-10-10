@@ -1,0 +1,47 @@
+# Every decision constant of the weekly triage. Delete a key to use its default.
+# See the "Triage" page of the documentation for how they combine.
+
+window_days: 7                 # items first seen this many days ago or less are this week's
+reference_days: 28             # population the percentiles are computed against
+min_family_population: 30      # smaller source families are ranked against all items
+embed_summary_words: 30        # words of summary embedded after the title
+context_max_words: 150         # length of the snippet fetched for items without summary
+neutral_popularity: 0.5        # popularity of an item without any signal
+
+weights:                       # fixed prescore
+  relevance: 0.60
+  popularity: 0.25
+  multi_source: 0.10
+  watched: 0.15
+
+relevance_gate: 0.75           # minimum relevance (percentile) to become a candidate
+candidates: 50                 # candidates sent to the LLM
+family_floor: 5                # slots reserved per source family among the candidates
+
+discovery:                     # very popular items outside the profile
+  slots: 2
+  min_popularity: 0.95
+
+llm_weight: 0.6                # share of the LLM relevance in the fixed final score
+llm_gate: 1                    # items whose best LLM relevance (0-5) is at most this are dropped
+selected: 18                   # maximum items in the digest
+per_theme_max: 4               # maximum items per theme
+
+revenant:                      # old items coming back into fashion
+  min_age_days: 30
+  min_popularity: 0.90
+  cooldown_weeks: 8
+
+refresh:                       # daily refresh of stars and upvotes
+  horizon_days: 180
+  max_items_per_day: 1000
+
+learning:                      # scoring learned from feedback
+  min_reliable_labels: 50
+  min_per_polarity: 10
+  min_auc: 0.65
+  weak_negative_weight: 0.2    # weight of "shown, no reaction" in the loss (never evaluated)
+  weak_negative_grace_days: 14
+  cv_folds: 5
+
+alert_after_days: 8            # `health` fails when no triage ran for this many days
