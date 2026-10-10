@@ -24,14 +24,17 @@ from auto_biblio.sources import SourceFactory, build_sources
 from auto_biblio.sources._http import Throttle
 from auto_biblio.sources.context import ContextFetcher
 from auto_biblio.sources.refresh import GithubStarsClient, HfUpvotesClient
+from auto_biblio.stages.analyze import AnalyzeStage
 from auto_biblio.stages.collect import CollectStage
 from auto_biblio.stages.digest import DigestStage
 from auto_biblio.stages.feedback import FeedbackStage
 from auto_biblio.stages.refresh import SignalRefreshStage
 from auto_biblio.stages.triage import TriageStage
+from auto_biblio.store.analysis import AnalysisStore
 from auto_biblio.store.cursors import CursorStore
 from auto_biblio.store.feedback import FeedbackStore
 from auto_biblio.store.items import ItemStore
+from auto_biblio.store.kb import KBStore
 from auto_biblio.store.runs import RunStore
 from auto_biblio.store.signals import SignalStore
 from auto_biblio.store.triage import TriageStore
@@ -44,6 +47,7 @@ EXIT_ALL_SOURCES_FAILED = 2
 EXIT_HEALTH_ALERT = 3
 EXIT_MAIL_FAILED = 4
 HF_INTERVAL_S = 0.5
+FULLTEXT_CACHE = Path(".cache/fulltext")
 WEEK_PATTERN = re.compile(r"^\d{4}-W\d{2}$")
 
 DataDirOption = Annotated[
@@ -256,6 +260,35 @@ def create_app(  # noqa: C901, PLR0915 - one nested function per command keeps t
             typer.echo(f"degraded: {degradation}")
 
     @app.command()
+    def analyze(data_dir: DataDirOption = None, week: WeekOption = None) -> None:
+        """Write the notes, the theme page and the changelog of a triaged week."""
+        root = data_dir or settings.data_dir
+        config = _load_config(root)
+        try:
+            llm_config = usable_llm_config(config.require_llm(), settings)
+            config = config.model_copy(update={"llm": llm_config})
+            state = root / "state"
+            runner = services.model_runner(settings)
+            with http_client(settings) as client:
+                stage = AnalyzeStage(
+                    config,
+                    ItemStore.open(state),
+                    TriageStore(state),
+                    AnalysisStore(state),
+                    KBStore.open(root / "kb"),
+                    extractor=services.extractor(settings, client, root / FULLTEXT_CACHE),
+                    llm_factory=llm_factory(runner, llm_config, state),
+                    clock=clock,
+                )
+                run = stage.run(week)
+        except (ConfigError, TriageRunMissingError) as exc:
+            raise _fail(str(exc), EXIT_CONFIG_ERROR) from exc
+        changed = sum(o.status in {"created", "deepened", "refreshed"} for o in run.outcomes)
+        typer.echo(f"{run.week}: {changed} notes written, theme page: {run.theme or 'none'}")
+        for degradation in run.degradations:
+            typer.echo(f"degraded: {degradation}")
+
+    @app.command()
     def digest(
         data_dir: DataDirOption = None,
         week: WeekOption = None,
@@ -280,6 +313,8 @@ def create_app(  # noqa: C901, PLR0915 - one nested function per command keeps t
             repo=settings.data_repo,
             to=settings.digest_to,
             clock=clock,
+            kb=KBStore.open(root / "kb"),
+            analyses=AnalysisStore(state),
         )
         try:
             mail = stage.run(week, dry_run_path=dry_run)

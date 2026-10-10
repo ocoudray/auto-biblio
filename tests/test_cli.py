@@ -6,13 +6,14 @@ import httpx
 import pytest
 import typer
 from builders import NOW, make_item
-from fakes import FakeEmbedder, FakeRunner
+from fakes import FakeEmbedder, PipelineRunner
 from typer.testing import CliRunner
 
 from auto_biblio.cli import create_app, main
 from auto_biblio.config import Settings
 from auto_biblio.domain.errors import MailDeliveryError, SourceUnavailableError
-from auto_biblio.domain.models import Clock, SourceBatch
+from auto_biblio.domain.models import Clock, Item, SourceBatch
+from auto_biblio.extract import ExtractedText
 from auto_biblio.publish import Mail
 from auto_biblio.repo_config.loader import RepoConfig
 from auto_biblio.sources import Source, SourceFactory
@@ -140,7 +141,7 @@ def test_collect_uses_configured_overlap(data_dir: Path) -> None:
 LLM_YAML = """
 models:
   m: {id: "test:m", input_usd_per_mtok: 0, output_usd_per_mtok: 0, batch_size: 10}
-chains: {triage: [m]}
+chains: {triage: [m], short_note: [m], deep_analysis: [m], synthesis: [m]}
 weekly_budget: {usd: 0, tokens: 1000000}
 """
 
@@ -157,11 +158,17 @@ class Outbox:
         self.sent.append(mail)
 
 
+class FullText:
+    def extract(self, item: Item, max_chars: int) -> ExtractedText:
+        return ExtractedText(text=f"Full text of {item.title}"[:max_chars], source="full_text")
+
+
 def services(outbox: Outbox | None = None) -> Services:
     return Services(
         embedder=lambda _s: FakeEmbedder(),
-        model_runner=lambda _s: FakeRunner(),
+        model_runner=lambda _s: PipelineRunner(),
         mail_sender=lambda _s: outbox,
+        extractor=lambda _s, _c, _d: FullText(),
     )
 
 
@@ -293,3 +300,31 @@ def test_health_alert(triage_dir: Path) -> None:
     later = app_with(clock=lambda: NOW + timedelta(days=9))
     assert runner.invoke(later, ["health", "--data-dir", str(triage_dir)]).exit_code == 3
     assert runner.invoke(app_with(), ["health", "--data-dir", str(triage_dir)]).exit_code == 0
+
+
+def test_analyze_command(triage_dir: Path, tmp_path: Path) -> None:
+    runner.invoke(app_with(), ["triage", "--data-dir", str(triage_dir)])
+    result = runner.invoke(app_with(), ["analyze", "--data-dir", str(triage_dir)])
+    assert result.exit_code == 0, result.output
+    assert "notes written" in result.output
+    assert list((triage_dir / "kb" / "notes").rglob("*.md"))
+    target = tmp_path / "digest.html"
+    runner.invoke(app_with(), ["digest", "--data-dir", str(triage_dir), "--dry-run", str(target)])
+    assert "Évolutions de la base" in target.read_text()
+
+
+def test_analyze_needs_triage(triage_dir: Path) -> None:
+    result = runner.invoke(app_with(), ["analyze", "--data-dir", str(triage_dir)])
+    assert result.exit_code == 1
+    assert "no triage journal" in result.stderr
+
+
+def test_analyze_needs_roles(triage_dir: Path) -> None:
+    llm = triage_dir / "config" / "llm.yaml"
+    llm.write_text(
+        llm.read_text().replace(", short_note: [m], deep_analysis: [m], synthesis: [m]", "")
+    )
+    runner.invoke(app_with(), ["triage", "--data-dir", str(triage_dir)])
+    result = runner.invoke(app_with(), ["analyze", "--data-dir", str(triage_dir)])
+    assert result.exit_code == 1
+    assert "short_note" in result.stderr

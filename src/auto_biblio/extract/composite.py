@@ -19,7 +19,7 @@ _DISCUSSION_HOSTS = ("news.ycombinator.com", "reddit.com", "www.reddit.com")
 class Fetcher(Protocol):
     """Fetches the full text behind a key (arXiv id, `owner/repo`, URL)."""
 
-    def fetch(self, key: str) -> str:
+    def fetch(self, key: str, /) -> str:
         """Fetch a text."""
         ...
 
