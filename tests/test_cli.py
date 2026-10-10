@@ -4,15 +4,21 @@ from pathlib import Path
 
 import httpx
 import pytest
+import typer
 from builders import NOW, make_item
+from fakes import FakeEmbedder, FakeRunner
 from typer.testing import CliRunner
 
 from auto_biblio.cli import create_app, main
 from auto_biblio.config import Settings
-from auto_biblio.domain.errors import SourceUnavailableError
+from auto_biblio.domain.errors import MailDeliveryError, SourceUnavailableError
 from auto_biblio.domain.models import Clock, SourceBatch
+from auto_biblio.publish import Mail
 from auto_biblio.repo_config.loader import RepoConfig
 from auto_biblio.sources import Source, SourceFactory
+from auto_biblio.store.items import ItemStore
+from auto_biblio.store.triage import TriageStore
+from auto_biblio.wiring import Services
 
 runner = CliRunner()
 
@@ -129,3 +135,161 @@ def test_collect_uses_configured_overlap(data_dir: Path) -> None:
     later = create_app(factory_of(arxiv), clock=lambda: NOW + timedelta(days=1))
     runner.invoke(later, ["collect", "--data-dir", str(data_dir)])
     assert arxiv.since[1] == NOW - timedelta(days=5)
+
+
+LLM_YAML = """
+models:
+  m: {id: "test:m", input_usd_per_mtok: 0, output_usd_per_mtok: 0, batch_size: 10}
+chains: {triage: [m]}
+weekly_budget: {usd: 0, tokens: 1000000}
+"""
+
+
+class Outbox:
+    def __init__(self, *, fail: bool = False) -> None:
+        self.sent: list[Mail] = []
+        self.fail = fail
+
+    def send(self, mail: Mail) -> None:
+        if self.fail:
+            message = "smtp down"
+            raise MailDeliveryError(message)
+        self.sent.append(mail)
+
+
+def services(outbox: Outbox | None = None) -> Services:
+    return Services(
+        embedder=lambda _s: FakeEmbedder(),
+        model_runner=lambda _s: FakeRunner(),
+        mail_sender=lambda _s: outbox,
+    )
+
+
+def offline(_settings: Settings) -> httpx.Client:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/issues"):
+            return httpx.Response(200, json=[])
+        return httpx.Response(404)
+
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+def app_with(outbox: Outbox | None = None, clock: Clock = lambda: NOW) -> typer.Typer:
+    return create_app(factory_of(), clock=clock, services=services(outbox), http_client=offline)
+
+
+@pytest.fixture
+def triage_dir(data_dir: Path) -> Path:
+    (data_dir / "config" / "llm.yaml").write_text(LLM_YAML)
+    items = ItemStore.open(data_dir / "state")
+    for i, title in enumerate(["Agent harness", "Agent memory", "Retrieval at scale", "Galaxies"]):
+        items.upsert(
+            make_item(item_id=f"arxiv:2410.0000{i}", title=title, seen_at=NOW - timedelta(days=2))
+        )
+    items.flush()
+    return data_dir
+
+
+def test_refresh_command(data_dir: Path) -> None:
+    result = runner.invoke(app_with(), ["signals", "refresh", "--data-dir", str(data_dir)])
+    assert result.exit_code == 0, result.output
+    assert "refresh:hf_upvotes: skipped" in result.output
+
+
+def test_feedback_requires_repo(data_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("AUTO_BIBLIO_DATA_REPO", raising=False)
+    result = runner.invoke(app_with(), ["feedback", "ingest", "--data-dir", str(data_dir)])
+    assert result.exit_code == 1
+    assert "AUTO_BIBLIO_DATA_REPO" in result.stderr
+
+
+def test_feedback_ingest(data_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AUTO_BIBLIO_DATA_REPO", "me/data")
+    monkeypatch.setenv("AUTO_BIBLIO_GITHUB_TOKEN", "t")
+    result = runner.invoke(app_with(), ["feedback", "ingest", "--data-dir", str(data_dir)])
+    assert result.exit_code == 0, result.output
+    assert "0 ingested" in result.output
+
+
+def test_triage_invalid_week(triage_dir: Path) -> None:
+    result = runner.invoke(app_with(), ["triage", "--data-dir", str(triage_dir), "--week", "41"])
+    assert result.exit_code != 0
+
+
+def test_triage_needs_llm_config(data_dir: Path) -> None:
+    result = runner.invoke(app_with(), ["triage", "--data-dir", str(data_dir)])
+    assert result.exit_code == 1
+    assert "llm.yaml" in result.stderr
+
+
+def test_triage_then_digest_dry_run(triage_dir: Path, tmp_path: Path) -> None:
+    result = runner.invoke(app_with(), ["triage", "--data-dir", str(triage_dir)])
+    assert result.exit_code == 0, result.output
+    assert "2026-W41" in result.output
+    assert list((triage_dir / ".cache" / "embeddings").rglob("*.npz"))
+    target = tmp_path / "digest.html"
+    args = ["digest", "--data-dir", str(triage_dir), "--dry-run", str(target)]
+    result = runner.invoke(app_with(), args)
+    assert result.exit_code == 0, result.output
+    latest = TriageStore(triage_dir / "state").latest()
+    assert latest is not None
+    shown = ItemStore.open(triage_dir / "state").get(latest.selected()[0].item_id)
+    assert shown is not None
+    assert shown.title in target.read_text()
+
+
+def test_digest_sends(triage_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AUTO_BIBLIO_DIGEST_TO", "me@example.com")
+    runner.invoke(app_with(), ["triage", "--data-dir", str(triage_dir)])
+    outbox = Outbox()
+    result = runner.invoke(app_with(outbox), ["digest", "--data-dir", str(triage_dir)])
+    assert result.exit_code == 0, result.output
+    assert len(outbox.sent) == 1
+
+
+def test_digest_mail_failure(triage_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AUTO_BIBLIO_DIGEST_TO", "me@example.com")
+    runner.invoke(app_with(), ["triage", "--data-dir", str(triage_dir)])
+    result = runner.invoke(app_with(Outbox(fail=True)), ["digest", "--data-dir", str(triage_dir)])
+    assert result.exit_code == 4
+
+
+def test_digest_requires_smtp(triage_dir: Path) -> None:
+    result = runner.invoke(app_with(None), ["digest", "--data-dir", str(triage_dir)])
+    assert result.exit_code == 1
+    assert "SMTP" in result.stderr
+
+
+def test_digest_missing_week(triage_dir: Path, tmp_path: Path) -> None:
+    args = [
+        "digest",
+        "--data-dir",
+        str(triage_dir),
+        "--week",
+        "2026-W01",
+        "--dry-run",
+        str(tmp_path / "x.html"),
+    ]
+    result = runner.invoke(app_with(), args)
+    assert result.exit_code == 1
+    assert "2026-W01" in result.stderr
+
+
+def test_eval_not_enough_labels(data_dir: Path) -> None:
+    result = runner.invoke(app_with(), ["eval", "scoring", "--data-dir", str(data_dir)])
+    assert result.exit_code == 0, result.output
+    assert "0 reliable labels" in result.output
+    assert "fixed: n/a" in result.output
+
+
+def test_health_ok_without_history(data_dir: Path) -> None:
+    result = runner.invoke(app_with(), ["health", "--data-dir", str(data_dir)])
+    assert result.exit_code == 0
+    assert "none yet" in result.output
+
+
+def test_health_alert(triage_dir: Path) -> None:
+    runner.invoke(app_with(), ["triage", "--data-dir", str(triage_dir)])
+    later = app_with(clock=lambda: NOW + timedelta(days=9))
+    assert runner.invoke(later, ["health", "--data-dir", str(triage_dir)]).exit_code == 3
+    assert runner.invoke(app_with(), ["health", "--data-dir", str(triage_dir)]).exit_code == 0

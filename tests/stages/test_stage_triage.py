@@ -1,10 +1,10 @@
-import json
 from collections.abc import Callable, Sequence
 from datetime import timedelta
 from pathlib import Path
 
 import pytest
 from builders import NOW, make_features, make_item, make_run, make_signal
+from fakes import FakeRunner
 from pydantic import BaseModel
 
 from auto_biblio.domain.budget import BudgetLedger
@@ -17,13 +17,13 @@ from auto_biblio.domain.errors import (
 from auto_biblio.domain.feedback import FeedbackEvent
 from auto_biblio.domain.ids import ItemId
 from auto_biblio.domain.models import Item, Signal
-from auto_biblio.domain.triage import LLMUsage, ScoredItem, TriageBatch, TriageRun
+from auto_biblio.domain.triage import ScoredItem, TriageRun
 from auto_biblio.embeddings import Vector
 from auto_biblio.llm import LLMResult, LLMTask, StructuredLLM
 from auto_biblio.llm.budgeted import BudgetedRunner
 from auto_biblio.llm.cached import CachedLLM
 from auto_biblio.llm.chain import FallbackHook, ModelChain
-from auto_biblio.repo_config.llm import LLMConfig, ModelSpec
+from auto_biblio.repo_config.llm import LLMConfig
 from auto_biblio.repo_config.loader import RepoConfig
 from auto_biblio.repo_config.profile import Profile
 from auto_biblio.repo_config.sources import SourcesConfig
@@ -77,51 +77,6 @@ class TopicEmbedder:
         raw = [*hits, 1.0 if not any(hits) else 0.2]
         norm = sum(x * x for x in raw) ** 0.5
         return tuple(x / norm for x in raw)
-
-
-def verdicts_for(task: LLMTask[TriageBatch]) -> TriageBatch:
-    items: list[dict[str, str]] = json.loads(task.user_prompt.split("\n", 1)[1])
-    verdicts: list[dict[str, object]] = []
-    for item in items:
-        title = item["title"].lower()
-        relevance = [
-            {"theme": theme, "score": 0 if "hype" in title else 4}
-            for theme, word in (("agentic", "agent"), ("rag", "retrieval"))
-            if word in title
-        ]
-        verdicts.append(
-            {
-                "ref": item["ref"],
-                "relevance": relevance,
-                "item_type": "tool",
-                "novelty": "high",
-                "confidence": "high",
-                "reason": f"About {title}.",
-            }
-        )
-    return TriageBatch.model_validate({"verdicts": verdicts})
-
-
-class FakeRunner:
-    """Answers like a sensible model and counts its calls."""
-
-    def __init__(self) -> None:
-        self.calls = 0
-
-    def run[T: BaseModel](self, task: LLMTask[T], spec: ModelSpec) -> LLMResult[T]:
-        self.calls += 1
-        output = task.output_type.model_validate(
-            verdicts_for(task).model_dump()  # pyright: ignore[reportArgumentType] - triage tasks only
-        )
-        usage = LLMUsage(
-            role=task.role,
-            model_id=spec.id,
-            input_tokens=500,
-            output_tokens=100,
-            cost_usd=0.0,
-            cached=False,
-        )
-        return LLMResult(output=task.validate(output, spec.id), usage=usage)
 
 
 class FailingLLM:
