@@ -90,3 +90,10 @@ def test_title_index_follows_retitled_items(tmp_path: Path) -> None:
         )
         == "merged"
     )
+
+
+def test_items_all_sorted(tmp_path: Path) -> None:
+    store = ItemStore.open(tmp_path)
+    store.upsert(make_item(item_id="gh:b/b", source_type="github_search", kind="repo"))
+    store.upsert(make_item(item_id="gh:a/a", source_type="github_search", kind="repo"))
+    assert [i.id for i in store.all()] == ["gh:a/a", "gh:b/b"]
