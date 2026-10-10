@@ -129,8 +129,9 @@ def test_releases_skip_missing_repo() -> None:
 def test_releases_other_errors_fail_the_source() -> None:
     config = GithubReleasesSourceConfig(name="github-releases", type="github_releases")
     client = httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(503)))
+    throttle = Throttle(0, max_retries=0)
     source = GithubReleasesSource(
-        config, ("astral-sh/uv",), client, lambda: NOW, Throttle(0), token=None
+        config, ("astral-sh/uv",), client, lambda: NOW, throttle, token=None
     )
     with pytest.raises(SourceUnavailableError, match="503"):
         source.fetch(NOW)

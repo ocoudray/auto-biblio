@@ -87,7 +87,13 @@ class HfPapersSource:
 
     def _day(self, day: date) -> list[_HfDailyPaper]:
         self._throttle.wait()
-        response = get(self._client, API_URL, source=self.name, params={"date": day.isoformat()})
+        response = get(
+            self._client,
+            API_URL,
+            source=self.name,
+            params={"date": day.isoformat()},
+            throttle=self._throttle,
+        )
         return parse_json(response, _DAY, source=self.name)
 
     def _item(self, paper: _HfPaper, now: datetime) -> Item:

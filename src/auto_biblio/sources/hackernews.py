@@ -74,7 +74,9 @@ class HackernewsSource:
             "numericFilters": filters,
             "hitsPerPage": HITS_PER_PAGE,
         }
-        response = get(self._client, API_URL, source=self.name, params=params)
+        response = get(
+            self._client, API_URL, source=self.name, params=params, throttle=self._throttle
+        )
         now = self._clock()
         items: list[Item] = []
         signals: list[Signal] = []

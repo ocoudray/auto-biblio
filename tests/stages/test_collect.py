@@ -174,3 +174,16 @@ def test_per_source_overlap(tmp_path: Path) -> None:
     stage.run()
     assert arxiv.since == [NOW - timedelta(days=5)]
     assert hn.since == [NOW - timedelta(days=2)]
+
+
+def test_partial_batch_is_stored_without_moving_cursor(tmp_path: Path) -> None:
+    cursors = CursorStore.open(tmp_path)
+    cursors.set("arxiv", NOW - timedelta(days=1))
+    cursors.flush()
+    batch = SourceBatch(items=(make_item(),), partial_error="arxiv: HTTP 429")
+    report = run(tmp_path, FakeSource("arxiv", batch))
+    (entry,) = report.sources
+    assert (entry.status, entry.new, entry.error) == ("partial", 1, "arxiv: HTTP 429")
+    assert ItemStore.open(tmp_path).get(ItemId("arxiv:2410.12345")) is not None
+    assert CursorStore.open(tmp_path).get("arxiv") == NOW - timedelta(days=1)
+    assert report.all_failed is False

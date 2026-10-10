@@ -129,6 +129,7 @@ class GithubSearchSource:
             source=self.name,
             params=params,
             headers=self._headers,
+            throttle=self._throttle,
         )
         return parse_json(response, _SEARCH, source=self.name).items
 
@@ -221,6 +222,7 @@ class GithubReleasesSource:
                 source=self.name,
                 params={"per_page": RELEASES_PAGE_SIZE},
                 headers=self._headers,
+                throttle=self._throttle,
             )
         except SourceUnavailableError as exc:
             if exc.status_code != HTTPStatus.NOT_FOUND:

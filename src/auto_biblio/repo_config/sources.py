@@ -22,7 +22,8 @@ class ArxivSourceConfig(_BaseSourceConfig):
     type: Literal["arxiv"]
     categories: tuple[str, ...] = Field(min_length=1)
     max_results: int = Field(default=6000, gt=0)
-    min_interval_s: float = Field(default=3.0, ge=0)
+    # arXiv asks for 3 s between calls; CI runners share IPs, so leave extra margin.
+    min_interval_s: float = Field(default=5.0, ge=0)
     # arXiv announces Thursday-Friday submissions on Monday: a cursor-based window
     # needs more than a weekend of overlap to catch them.
     overlap_days: int = Field(default=5, ge=0)

@@ -2,8 +2,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
+import pytest
 from builders import NOW
 
+from auto_biblio.domain.errors import SourceUnavailableError
 from auto_biblio.repo_config.sources import ArxivSourceConfig
 from auto_biblio.sources._http import Throttle
 from auto_biblio.sources.arxiv import ArxivSource
@@ -95,3 +97,52 @@ def test_item_fields() -> None:
 
 def test_empty_feed_returns_empty_batch() -> None:
     assert make_source(Recorder("empty.xml")).fetch(SINCE).items == ()
+
+
+class ScriptedArxiv:
+    """Serves pages in order; `None` stands for a 429 answer."""
+
+    def __init__(self, *pages: str | None) -> None:
+        self.pages = list(pages)
+        self.requests = 0
+
+    def __call__(self, _request: httpx.Request) -> httpx.Response:
+        self.requests += 1
+        page = self.pages.pop(0) if self.pages else "empty.xml"
+        if page is None:
+            return httpx.Response(429)
+        return httpx.Response(200, content=(FIXTURES / page).read_bytes())
+
+
+def scripted_source(script: ScriptedArxiv, sleeps: list[float], max_retries: int) -> ArxivSource:
+    config = ArxivSourceConfig(name="arxiv", type="arxiv", categories=("cs.CL",))
+    client = httpx.Client(transport=httpx.MockTransport(script))
+    throttle = Throttle(0, sleep=sleeps.append, max_retries=max_retries)
+    return ArxivSource(config, client, lambda: NOW, throttle)
+
+
+def test_rate_limited_page_is_retried() -> None:
+    sleeps: list[float] = []
+    script = ScriptedArxiv(None, "page1.xml", "page2.xml")
+    batch = scripted_source(script, sleeps, max_retries=3).fetch(SINCE)
+    assert len(batch.items) == 3
+    assert batch.partial_error is None
+    assert sleeps == [10.0]
+
+
+def test_pages_read_before_a_lasting_failure_are_kept() -> None:
+    script = ScriptedArxiv("page1.xml", None, None)
+    batch = scripted_source(script, [], max_retries=1).fetch(SINCE)
+    assert [i.id for i in batch.items] == [
+        "arxiv:2610.12427",
+        "arxiv:2610.12417",
+        "arxiv:2610.12410",
+    ]
+    assert batch.partial_error is not None
+    assert "429" in batch.partial_error
+
+
+def test_failure_on_first_page_still_raises() -> None:
+    script = ScriptedArxiv(None, None)
+    with pytest.raises(SourceUnavailableError):
+        scripted_source(script, [], max_retries=1).fetch(SINCE)
