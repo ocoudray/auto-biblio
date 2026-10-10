@@ -11,7 +11,11 @@ dependencies = [
     "pydantic>=2.14",
     "pydantic-settings>=2.15",
     "pyyaml>=6.0.3",
+    "typer>=0.27.3",
 ]
+
+[project.scripts]
+auto-biblio = "auto_biblio.cli:main"
 
 [dependency-groups]
 dev = [
