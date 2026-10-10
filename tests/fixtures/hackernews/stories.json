@@ -1,0 +1,38 @@
+{
+  "hits": [
+    {
+      "objectID": "50029982",
+      "title": "Computers Cannot Make Decisions",
+      "url": "https://arxiv.org/abs/2410.12345",
+      "author": "heavensteeth",
+      "points": 71,
+      "num_comments": 51,
+      "created_at": "2026-10-10T05:47:46Z",
+      "created_at_i": 1791611266
+    },
+    {
+      "objectID": "50029630",
+      "title": "Ask HN: How do you track AI research?",
+      "url": null,
+      "author": "smilelamp",
+      "points": 166,
+      "num_comments": 63,
+      "created_at": "2026-10-10T04:40:36Z",
+      "created_at_i": 1791607236
+    },
+    {
+      "objectID": "50029452",
+      "title": "Data Center Darling's $30B IPO Dream Crushed in 48 Hours",
+      "url": "https://www.bloomberg.com/news/articles/2026-10-09/data-center-darling-s-30-billion-ipo-dream-crushed-in-48-hours",
+      "author": "mfiguiere",
+      "points": 36,
+      "num_comments": 8,
+      "created_at": "2026-10-10T04:04:17Z",
+      "created_at_i": 1791605057
+    }
+  ],
+  "nbHits": 3,
+  "page": 0,
+  "nbPages": 1,
+  "hitsPerPage": 3
+}
