@@ -42,7 +42,7 @@ def test_sources_discriminated_union() -> None:
 def test_sources_defaults() -> None:
     arxiv, hf, search, _, hn, rss = parse(ALL_TYPES).sources
     assert isinstance(arxiv, ArxivSourceConfig)
-    assert (arxiv.max_results, arxiv.min_interval_s, arxiv.overlap_days) == (6000, 3.0, 5)
+    assert (arxiv.max_results, arxiv.min_interval_s, arxiv.overlap_days) == (6000, 5.0, 5)
     assert hf.overlap_days == 2
     assert isinstance(search, GithubSearchSourceConfig)
     assert (search.min_stars, search.created_within_days) == (50, 30)

@@ -26,3 +26,8 @@ def test_run_report_all_failed() -> None:
 def test_run_report_any_ok() -> None:
     assert make_report("failed", "ok").any_ok is True
     assert make_report("skipped").any_ok is False
+
+
+def test_partial_counts_as_progress() -> None:
+    assert make_report("partial", "failed").all_failed is False
+    assert make_report("partial").any_ok is True

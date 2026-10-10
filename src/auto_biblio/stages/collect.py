@@ -105,6 +105,10 @@ class CollectStage:
             logger.exception("source %s crashed", source.name)
             return SourceReport(source=source.name, status="failed", error=repr(exc))
         report = self._store(source.name, batch)
+        if batch.partial_error is not None:
+            # Keep the cursor: the next run fetches the incomplete window again.
+            logger.warning("source incomplete: %s", batch.partial_error)
+            return report
         self._cursors.set(source.name, fetched_at)
         logger.info("%s: %d items (%d new), %d signals", *_summary(report))
         return report
@@ -119,7 +123,8 @@ class CollectStage:
         outcomes = [self._items.upsert(item) for item in batch.items]
         return SourceReport(
             source=name,
-            status="ok",
+            status="ok" if batch.partial_error is None else "partial",
+            error=batch.partial_error,
             received=len(batch.items),
             new=outcomes.count("new"),
             merged=outcomes.count("merged"),

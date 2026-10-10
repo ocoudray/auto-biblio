@@ -19,7 +19,7 @@ Two repositories work together:
   state and the GitHub Actions workflow that runs the collection every day.
 
 ```bash
-uv tool install git+https://github.com/ocoudray/auto-biblio@v0.1.0
+uv tool install git+https://github.com/ocoudray/auto-biblio@v0.1.1
 auto-biblio init ~/auto-biblio-data          # writes config/, state/, .github/workflows/daily.yml
 cd ~/auto-biblio-data && auto-biblio validate-config
 git init -b main && git add -A && git commit -m "chore: init data repository"
@@ -48,7 +48,7 @@ No LLM is involved at this stage: collection is free and deterministic.
 
 | Type | What is queried | What is kept |
 |---|---|---|
-| `arxiv` | arXiv export API, newest submissions first in the configured categories (default cs.CL, cs.LG, cs.CV, cs.AI), pages of 100, 3 s apart, up to `max_results` | papers: title, abstract, authors, categories |
+| `arxiv` | arXiv export API, newest submissions first in the configured categories (default cs.CL, cs.LG, cs.CV, cs.AI), pages of 100, 5 s apart, up to `max_results` | papers: title, abstract, authors, categories |
 | `hf_papers` | Hugging Face Daily Papers, one request per day covered | papers, the GitHub repository linked to each, **upvotes** |
 | `github_search` | GitHub search, one query per topic: repositories created in the last `created_within_days` (30) with more than `min_stars` (50) | repositories, **stars** |
 | `github_releases` | releases of the repositories listed under `watch.repos` in `config/profile.yaml` | one item per release, linked to its repository |
@@ -84,10 +84,15 @@ Popularity counters (stars, upvotes, points, comments) are stored separately as 
 - Each source resumes from its **cursor** (last successful run) minus an **overlap** (2 days by
   default, 5 for arXiv, which announces Thursday–Friday submissions on Monday). Its first run
   looks back 7 days. Overlaps and deduplication make a rerun harmless.
+- Rate limiting is **retried**: a `429` or `503` answer is retried up to 3 times, after the
+  server's `Retry-After` delay (capped at 120 s) or a 10 s / 20 s / 40 s backoff.
 - Sources are **isolated**: a source that fails (network error, HTTP error, unexpected payload)
   is reported as `failed`, keeps its cursor and catches up on the next run; the others proceed.
+- A paginated source that fails midway (arXiv) keeps the pages it already read: it is
+  reported as `partial`, its items are stored, and its cursor does not move, so the next run
+  fetches the incomplete window again.
   Unparsable payloads are kept in `state/quarantine/` for diagnosis.
-- `auto-biblio collect` exits with 0 when at least one source succeeded, 1 on invalid
+- `auto-biblio collect` exits with 0 when at least one source succeeded (fully or partially), 1 on invalid
   configuration, 2 when every source failed.
 
 ### The data repository

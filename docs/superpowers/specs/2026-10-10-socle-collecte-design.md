@@ -123,7 +123,7 @@ requêtes).
 
 ```yaml
 sources:
-  - { name: arxiv, type: arxiv, categories: [cs.CL, cs.LG, cs.CV, cs.AI], max_results: 6000, min_interval_s: 3, overlap_days: 5 }
+  - { name: arxiv, type: arxiv, categories: [cs.CL, cs.LG, cs.CV, cs.AI], max_results: 6000, min_interval_s: 5, overlap_days: 5 }
   - { name: hf-papers, type: hf_papers }
   - { name: github-rising, type: github_search, topics: [llm, agents, rag, ocr, document-ai, tabular], min_stars: 50, created_within_days: 30 }
   - { name: github-releases, type: github_releases }     # repos : union des profile.themes[*].watch.repos

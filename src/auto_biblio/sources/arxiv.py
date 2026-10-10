@@ -4,6 +4,7 @@ from datetime import datetime
 
 import httpx
 
+from auto_biblio.domain.errors import SourceUnavailableError
 from auto_biblio.domain.ids import canonical_id
 from auto_biblio.domain.models import Clock, Item, Sighting, SourceBatch
 from auto_biblio.repo_config.sources import ArxivSourceConfig
@@ -49,14 +50,23 @@ class ArxivSource:
         """
         query = " OR ".join(f"cat:{c}" for c in self._config.categories)
         entries: list[FeedEntry] = []
+        partial_error: str | None = None
         while len(entries) < self._config.max_results:
-            page = self._page(query, start=len(entries))
+            try:
+                page = self._page(query, start=len(entries))
+            except SourceUnavailableError as exc:
+                if not entries:
+                    raise
+                # Keep the pages already read; the source reports the window as incomplete.
+                partial_error = str(exc)
+                break
             recent = [e for e in page if e.published is None or e.published >= since]
             entries.extend(recent)
             if not page or len(recent) < len(page):
                 break
         now = self._clock()
-        return SourceBatch(items=tuple(self._item(e, now) for e in entries))
+        items = tuple(self._item(e, now) for e in entries)
+        return SourceBatch(items=items, partial_error=partial_error)
 
     def _page(self, query: str, start: int) -> tuple[FeedEntry, ...]:
         self._throttle.wait()
@@ -68,7 +78,9 @@ class ArxivSource:
             "start": start,
             "max_results": size,
         }
-        response = get(self._client, API_URL, source=self.name, params=params)
+        response = get(
+            self._client, API_URL, source=self.name, params=params, throttle=self._throttle
+        )
         return parse_feed(response.content, source=self.name)[:size]
 
     def _item(self, entry: FeedEntry, now: datetime) -> Item:

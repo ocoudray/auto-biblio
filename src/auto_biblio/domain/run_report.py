@@ -4,7 +4,8 @@ from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict
 
-SourceStatus = Literal["ok", "failed", "skipped"]
+SourceStatus = Literal["ok", "partial", "failed", "skipped"]
+"""`partial`: the source failed midway; what it returned is stored, its cursor is not moved."""
 
 
 class SourceReport(BaseModel):
@@ -34,10 +35,10 @@ class RunReport(BaseModel):
 
     @property
     def any_ok(self) -> bool:
-        """Whether at least one source succeeded."""
-        return any(s.status == "ok" for s in self.sources)
+        """Whether at least one source brought results (fully or partially)."""
+        return any(s.status in {"ok", "partial"} for s in self.sources)
 
     @property
     def all_failed(self) -> bool:
-        """Whether at least one source failed and none succeeded."""
+        """Whether at least one source failed and none brought results."""
         return not self.any_ok and any(s.status == "failed" for s in self.sources)

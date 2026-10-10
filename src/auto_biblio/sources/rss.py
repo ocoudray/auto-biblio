@@ -46,7 +46,9 @@ class RssSource:
             The items found (no signals: feeds carry none).
         """
         self._throttle.wait()
-        response = get(self._client, str(self._config.url), source=self.name)
+        response = get(
+            self._client, str(self._config.url), source=self.name, throttle=self._throttle
+        )
         entries = parse_feed(response.content, source=self.name)
         now = self._clock()
         return SourceBatch(

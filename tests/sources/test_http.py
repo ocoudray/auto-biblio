@@ -67,3 +67,64 @@ def test_unavailable_error_carries_status() -> None:
     with pytest.raises(SourceUnavailableError) as excinfo:
         get(client_returning(404), "https://example.com", source="s")
     assert excinfo.value.status_code == 404
+
+
+def scripted_client(*responses: httpx.Response) -> tuple[httpx.Client, list[httpx.Request]]:
+    queue = list(responses)
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return queue.pop(0) if len(queue) > 1 else queue[0]
+
+    return httpx.Client(transport=httpx.MockTransport(handler)), seen
+
+
+def make_throttle(fake: FakeTime, max_retries: int = 3) -> Throttle:
+    return Throttle(0, monotonic=fake.monotonic, sleep=fake.sleep, max_retries=max_retries)
+
+
+def test_get_retries_using_retry_after() -> None:
+    fake = FakeTime()
+    client, seen = scripted_client(
+        httpx.Response(429, headers={"Retry-After": "7"}), httpx.Response(200, text="ok")
+    )
+    response = get(client, "https://e.com", source="s", throttle=make_throttle(fake))
+    assert response.text == "ok"
+    assert len(seen) == 2
+    assert fake.sleeps == [7.0]
+
+
+def test_get_backs_off_exponentially_without_retry_after() -> None:
+    fake = FakeTime()
+    client, _ = scripted_client(
+        httpx.Response(503), httpx.Response(503), httpx.Response(200, text="ok")
+    )
+    get(client, "https://e.com", source="s", throttle=make_throttle(fake))
+    assert fake.sleeps == [10.0, 20.0]
+
+
+def test_get_caps_retry_after() -> None:
+    fake = FakeTime()
+    client, _ = scripted_client(
+        httpx.Response(429, headers={"Retry-After": "3600"}), httpx.Response(200)
+    )
+    get(client, "https://e.com", source="s", throttle=make_throttle(fake))
+    assert fake.sleeps == [120.0]
+
+
+def test_get_gives_up_after_max_retries() -> None:
+    fake = FakeTime()
+    client, seen = scripted_client(httpx.Response(429))
+    with pytest.raises(SourceUnavailableError, match="429"):
+        get(client, "https://e.com", source="s", throttle=make_throttle(fake, max_retries=2))
+    assert len(seen) == 3
+
+
+def test_get_does_not_retry_other_errors() -> None:
+    fake = FakeTime()
+    client, seen = scripted_client(httpx.Response(404))
+    with pytest.raises(SourceUnavailableError):
+        get(client, "https://e.com", source="s", throttle=make_throttle(fake))
+    assert len(seen) == 1
+    assert fake.sleeps == []

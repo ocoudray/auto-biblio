@@ -89,3 +89,5 @@ class SourceBatch(BaseModel):
 
     items: tuple[Item, ...] = ()
     signals: tuple[Signal, ...] = ()
+    partial_error: str | None = None
+    """Set when the source failed midway: what was fetched is kept, but the window is incomplete."""
