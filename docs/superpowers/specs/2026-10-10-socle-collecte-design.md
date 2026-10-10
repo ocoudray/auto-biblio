@@ -19,7 +19,9 @@ configuration, store, taxonomie d'erreurs, journal d'exécution et CLI.
 1. `auto-biblio init <dir>` crée un repo de données prêt à l'emploi : configuration par défaut
    (profil et sources de la vision) et workflow quotidien.
 2. `auto-biblio collect` interroge toutes les sources activées. Les items et signaux sont écrits
-   dans `state/`, et une seconde exécution immédiate ne produit **aucun diff**.
+   dans `state/`, et une seconde exécution immédiate (même jour, mêmes réponses) ne produit
+   **aucun diff** dans `state/items/` ni `state/signals/` (seuls `runs/` et `cursors.json`
+   évoluent, par nature).
 3. Un même contenu vu sur plusieurs sources (par exemple un papier arXiv présent sur HF Papers
    et sur HN) ne donne **qu'un seul** `Item`, avec plusieurs `sightings`.
 4. La panne d'une source n'empêche pas les autres de tourner. Elle est consignée dans le journal
