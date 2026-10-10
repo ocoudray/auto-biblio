@@ -68,7 +68,7 @@ def get(
         raise SourceUnavailableError(source, f"request to {url} failed: {exc}") from exc
     if not response.is_success:
         message = f"HTTP {response.status_code} from {url}"
-        raise SourceUnavailableError(source, message)
+        raise SourceUnavailableError(source, message, response.status_code)
     return response
 
 

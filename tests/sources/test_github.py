@@ -6,7 +6,7 @@ import pytest
 from builders import NOW
 from pydantic import SecretStr
 
-from auto_biblio.domain.errors import SourcePayloadError
+from auto_biblio.domain.errors import SourcePayloadError, SourceUnavailableError
 from auto_biblio.repo_config.sources import GithubReleasesSourceConfig, GithubSearchSourceConfig
 from auto_biblio.sources._http import Throttle
 from auto_biblio.sources.github import GithubReleasesSource, GithubSearchSource
@@ -107,3 +107,30 @@ def test_releases_no_repos_returns_empty_batch() -> None:
     requests: list[httpx.Request] = []
     assert releases_source(requests, repos=()).fetch(NOW).items == ()
     assert requests == []
+
+
+def test_releases_skip_missing_repo() -> None:
+    body = (FIXTURES / "releases.json").read_bytes()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/repos/gone/repo/releases":
+            return httpx.Response(404, json={"message": "Not Found"})
+        return httpx.Response(200, content=body)
+
+    config = GithubReleasesSourceConfig(name="github-releases", type="github_releases")
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    source = GithubReleasesSource(
+        config, ("gone/repo", "astral-sh/uv"), client, lambda: NOW, Throttle(0), token=None
+    )
+    items = source.fetch(datetime(2026, 10, 5, tzinfo=UTC)).items
+    assert [i.id for i in items] == ["gh:astral-sh/uv@0.13.0", "gh:astral-sh/uv@0.12.24"]
+
+
+def test_releases_other_errors_fail_the_source() -> None:
+    config = GithubReleasesSourceConfig(name="github-releases", type="github_releases")
+    client = httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(503)))
+    source = GithubReleasesSource(
+        config, ("astral-sh/uv",), client, lambda: NOW, Throttle(0), token=None
+    )
+    with pytest.raises(SourceUnavailableError, match="503"):
+        source.fetch(NOW)

@@ -27,14 +27,16 @@ class ConfigError(AutoBiblioError):
 class SourceUnavailableError(AutoBiblioError):
     """A source could not be reached (network error, timeout, non-2xx status)."""
 
-    def __init__(self, source: str, message: str) -> None:
+    def __init__(self, source: str, message: str, status_code: int | None = None) -> None:
         """Build the error.
 
         Args:
             source: Name of the source, as configured.
             message: What went wrong.
+            status_code: HTTP status, when the source answered with one.
         """
         self.source = source
+        self.status_code = status_code
         super().__init__(f"{source}: {message}")
 
 

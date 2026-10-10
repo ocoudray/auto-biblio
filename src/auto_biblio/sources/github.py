@@ -1,15 +1,20 @@
 """GitHub connectors: fast-rising new repositories and releases of watched repositories."""
 
+import logging
 from datetime import datetime, timedelta
+from http import HTTPStatus
 
 import httpx
 from pydantic import AwareDatetime, BaseModel, SecretStr, TypeAdapter
 
+from auto_biblio.domain.errors import SourceUnavailableError
 from auto_biblio.domain.ids import ItemId, canonical_id
 from auto_biblio.domain.models import Clock, Item, Sighting, Signal, SourceBatch
 from auto_biblio.repo_config.sources import GithubReleasesSourceConfig, GithubSearchSourceConfig
 from auto_biblio.sources._feeds import SUMMARY_MAX
 from auto_biblio.sources._http import Throttle, get, parse_json
+
+logger = logging.getLogger(__name__)
 
 API_URL = "https://api.github.com"
 SEARCH_PAGE_SIZE = 100
@@ -209,13 +214,20 @@ class GithubReleasesSource:
 
     def _releases(self, repo: str) -> list[_Release]:
         self._throttle.wait()
-        response = get(
-            self._client,
-            f"{API_URL}/repos/{repo}/releases",
-            source=self.name,
-            params={"per_page": RELEASES_PAGE_SIZE},
-            headers=self._headers,
-        )
+        try:
+            response = get(
+                self._client,
+                f"{API_URL}/repos/{repo}/releases",
+                source=self.name,
+                params={"per_page": RELEASES_PAGE_SIZE},
+                headers=self._headers,
+            )
+        except SourceUnavailableError as exc:
+            if exc.status_code != HTTPStatus.NOT_FOUND:
+                raise
+            # A renamed or deleted watched repo must not block the others' releases.
+            logger.warning("%s: watched repository %s not found, skipped", self.name, repo)
+            return []
         return [r for r in parse_json(response, _RELEASES, source=self.name) if not r.draft]
 
     def _item(self, repo: str, release: _Release, now: datetime) -> Item:

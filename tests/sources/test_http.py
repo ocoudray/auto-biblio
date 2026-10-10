@@ -61,3 +61,9 @@ def test_get_passes_params_and_headers() -> None:
     assert response.text == "ok"
     assert seen[0].url.params["a"] == "1"
     assert seen[0].headers["X-T"] == "v"
+
+
+def test_unavailable_error_carries_status() -> None:
+    with pytest.raises(SourceUnavailableError) as excinfo:
+        get(client_returning(404), "https://example.com", source="s")
+    assert excinfo.value.status_code == 404
