@@ -59,3 +59,15 @@ def test_refuses_to_overwrite(tmp_path: Path) -> None:
 def test_templates_ship_with_package() -> None:
     template = files("auto_biblio.scaffold_templates").joinpath("sources.yaml")
     assert "arxiv" in template.read_text(encoding="utf-8")
+
+
+def test_workflow_commits_state_even_when_collect_fails(tmp_path: Path) -> None:
+    scaffold_data_repo(tmp_path, "1.2.3")
+    workflow = (tmp_path / ".github" / "workflows" / "daily.yml").read_text()
+    commit_step = workflow[workflow.index("- name: Commit state") :]
+    assert "if: ${{ !cancelled() }}" in commit_step
+
+
+def test_gitignore_excludes_interrupted_writes(tmp_path: Path) -> None:
+    scaffold_data_repo(tmp_path, "1.2.3")
+    assert "*.tmp" in (tmp_path / ".gitignore").read_text().splitlines()

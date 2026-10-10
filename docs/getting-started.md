@@ -30,7 +30,14 @@ auto-biblio validate-config
 | `.github/workflows/daily.yml` | Daily collection at 05:00 UTC, pinned to the installed version |
 | `.gitignore`, `state/.gitkeep` | Repository skeleton |
 
-Push it to a **private** GitHub repository: the workflow commits `state/` after each run.
+Push it to a **private** GitHub repository: the workflow commits `state/` after each run,
+including the run report when every source failed.
+
+!!! warning "Prerequisites for the daily workflow"
+    The workflow installs `git+https://github.com/ocoudray/auto-biblio@v<version>`, the version
+    you ran `init` with. That tag must exist on GitHub, and this code repository must be public
+    (otherwise the workflow needs a read token for it). Push the tag before the first scheduled
+    run, for example `git tag v0.1.0 && git push origin v0.1.0`.
 
 ## Collect
 

@@ -27,6 +27,9 @@ jobs:
         env:
           AUTO_BIBLIO_GITHUB_TOKEN: $${{ secrets.GITHUB_TOKEN }}
       - name: Commit state
+        # Also after a failed collection: the run report and quarantined payloads
+        # are exactly what is needed to diagnose it. The job still ends in failure.
+        if: $${{ !cancelled() }}
         run: |
           if [ -n "$$(git status --porcelain state)" ]; then
             git config user.name "github-actions[bot]"
