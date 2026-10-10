@@ -184,6 +184,11 @@ class GithubReleasesSource:
         """Configured name of this source instance."""
         return self._config.name
 
+    @property
+    def repos(self) -> tuple[str, ...]:
+        """Watched ``owner/repo`` names."""
+        return self._repos
+
     def fetch(self, since: datetime) -> SourceBatch:
         """Fetch releases published since `since` (drafts are ignored).
 
