@@ -1,8 +1,12 @@
 """Application settings, loaded from environment variables and an optional `.env` file."""
 
+from pathlib import Path
 from typing import Literal
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from auto_biblio import __version__
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
 
@@ -21,3 +25,7 @@ class Settings(BaseSettings):
     )
 
     log_level: LogLevel = "INFO"
+    data_dir: Path = Path()
+    github_token: SecretStr | None = None
+    http_timeout_s: float = 30.0
+    user_agent: str = f"auto-biblio/{__version__} (+https://github.com/ocoudray/auto-biblio)"

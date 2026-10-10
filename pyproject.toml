@@ -6,9 +6,16 @@ readme = "README.md"
 authors = [{ name = "Olivier COUDRAY", email = "olivier.coudray.15@polytechnique.org" }]
 requires-python = ">=3.12"
 dependencies = [
+    "feedparser>=6.0.14",
+    "httpx>=0.28.1",
     "pydantic>=2.14",
     "pydantic-settings>=2.15",
+    "pyyaml>=6.0.3",
+    "typer>=0.27.3",
 ]
+
+[project.scripts]
+auto-biblio = "auto_biblio.cli:main"
 
 [dependency-groups]
 dev = [
@@ -18,6 +25,7 @@ dev = [
     "pytest>=9.1",
     "pytest-cov>=7.1",
     "ruff>=0.16",
+    "types-pyyaml>=6.0.12.20260906",
 ]
 docs = [
     "mkdocstrings-python>=2.0",
@@ -56,6 +64,7 @@ typeCheckingMode = "strict"
 pythonVersion = "3.12"
 venvPath = "."
 venv = ".venv"
+extraPaths = ["tests"]  # shared test builders (tests/builders.py)
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

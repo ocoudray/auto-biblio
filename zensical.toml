@@ -6,6 +6,11 @@ repo_url = "https://github.com/ocoudray/auto-biblio"
 nav = [
   { "Home" = "index.md" },
   { "Getting started" = "getting-started.md" },
+  { "Design" = [
+    { "Vision" = "superpowers/specs/2026-10-10-auto-biblio-vision-design.md" },
+    { "Collection spec" = "superpowers/specs/2026-10-10-socle-collecte-design.md" },
+    { "Collection plan" = "superpowers/plans/2026-10-10-socle-collecte.md" },
+  ] },
   { "Reference" = "reference/index.md" },
   { "Coverage" = "coverage.md" },
 ]

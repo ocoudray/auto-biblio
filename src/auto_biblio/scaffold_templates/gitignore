@@ -1,0 +1,4 @@
+.env
+__pycache__/
+# Temporary files left by an interrupted atomic write
+*.tmp

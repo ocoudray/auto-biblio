@@ -1,0 +1,91 @@
+[
+  {
+    "paper": {
+      "id": "2610.09823",
+      "authors": [
+        {
+          "_id": "6ac702604eb8005165aed407",
+          "name": "Deyuan Liu",
+          "hidden": false
+        },
+        {
+          "_id": "6ac702604eb8005165aed408",
+          "name": "Yihao Hu",
+          "hidden": false
+        },
+        {
+          "_id": "6ac702604eb8005165aed409",
+          "name": "Jingxuan Zhang",
+          "hidden": false
+        }
+      ],
+      "publishedAt": "2026-10-07T00:00:00.000Z",
+      "title": "UltraText Bench: A Comprehensive Bilingual Benchmark for Evaluating Visual Text Rendering in Image Generation",
+      "summary": "Dense visual text requires image generators to reproduce long strings across multiple regions with correct placement and legibility.",
+      "upvotes": 151,
+      "githubRepo": "https://github.com/LINs-lab/UltraText_Bench"
+    },
+    "publishedAt": "2026-10-06T20:00:00.000Z",
+    "title": "UltraText Bench: A Comprehensive Bilingual Benchmark for Evaluating Visual Text Rendering in Image Generation",
+    "numComments": 2
+  },
+  {
+    "paper": {
+      "id": "2610.04299",
+      "authors": [
+        {
+          "_id": "6ac445589eb4ee6bd77a9345",
+          "name": "Jinyuan Li",
+          "hidden": false
+        },
+        {
+          "_id": "6ac445589eb4ee6bd77a9346",
+          "name": "Chengsong Huang",
+          "hidden": false
+        },
+        {
+          "_id": "6ac445589eb4ee6bd77a9347",
+          "name": "Langlin Huang",
+          "hidden": false
+        }
+      ],
+      "publishedAt": "2026-10-03T00:00:00.000Z",
+      "title": "Questioning the Questions: Sustaining Self-Evolution in Reasoning Models",
+      "summary": "Self-evolving reasoning models learn from their own generated questions, yet repeated self-training can lead to performance collapse.",
+      "upvotes": 69
+    },
+    "publishedAt": "2026-10-02T20:00:00.000Z",
+    "title": "Questioning the Questions: Sustaining Self-Evolution in Reasoning Models",
+    "numComments": 2
+  },
+  {
+    "paper": {
+      "id": "2610.08077",
+      "authors": [
+        {
+          "_id": "6ac832844364a3d18a5cc623",
+          "name": "Haoxiang Zhang",
+          "hidden": false
+        },
+        {
+          "_id": "6ac832844364a3d18a5cc624",
+          "name": "Qinglin Chen",
+          "hidden": false
+        },
+        {
+          "_id": "6ac832844364a3d18a5cc625",
+          "name": "Hiroaki Hayashi",
+          "hidden": false
+        }
+      ],
+      "publishedAt": "2026-10-06T00:00:00.000Z",
+      "title": "Self-Retrospection Distillation: Turning Post-hoc Experiences into Prior Foresight",
+      "summary": "Reinforcement learning with verifiable rewards (RLVR) turns agent experience into learning signals primarily through scalar outcome rewards after interaction.",
+      "upvotes": 137,
+      "githubRepo": "https://github.com/SalesforceAIResearch/SRD"
+    },
+    "publishedAt": "2026-10-05T20:00:00.000Z",
+    "title": "Self-Retrospection Distillation: Turning Post-hoc Experiences into Prior Foresight",
+    "numComments": 2
+  }
+]
