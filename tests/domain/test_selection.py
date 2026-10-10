@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from builders import NOW, make_item
+from builders import NOW, make_item, make_verdict
 
 from auto_biblio.domain.features import FeatureVector, SourceFamily, ThemeId
 from auto_biblio.domain.ids import ItemId
@@ -143,9 +143,7 @@ def test_discoveries_require_popularity_and_novelty() -> None:
 
 
 def verdict(scores: dict[ThemeId, int]) -> TriageVerdict:
-    return TriageVerdict(
-        ref="i", relevance=scores, item_type="tool", novelty="low", confidence="low", reason="r"
-    )
+    return make_verdict("i", scores)
 
 
 def scored(

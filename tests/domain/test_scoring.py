@@ -2,7 +2,7 @@ import math
 from datetime import timedelta
 
 import pytest
-from builders import NOW, make_signal
+from builders import NOW, make_signal, make_verdict
 
 from auto_biblio.domain.features import FeatureVector, ThemeId
 from auto_biblio.domain.ids import ItemId
@@ -16,7 +16,6 @@ from auto_biblio.domain.scoring import (
     theme_similarities,
     velocity,
 )
-from auto_biblio.domain.triage import TriageVerdict
 from auto_biblio.repo_config.triage import ScoringWeights
 
 T1, T2 = ThemeId("t1"), ThemeId("t2")
@@ -113,14 +112,7 @@ def test_prescore_formula() -> None:
 
 
 def test_llm_relevance_scales_to_unit() -> None:
-    verdict = TriageVerdict(
-        ref="i01",
-        relevance={T1: 5, T2: 4},
-        item_type="tool",
-        novelty="high",
-        confidence="high",
-        reason="ok",
-    )
+    verdict = make_verdict(scores={T1: 5, T2: 4})
     assert llm_relevance(verdict, {T1: 0.5, T2: 1.0}) == pytest.approx(0.8)
     empty = verdict.model_copy(update={"relevance": {}})
     assert llm_relevance(empty, {T1: 1.0}) == 0.0

@@ -2,10 +2,10 @@
 
 from datetime import UTC, datetime
 
-from auto_biblio.domain.features import FeatureVector
+from auto_biblio.domain.features import FeatureVector, ThemeId
 from auto_biblio.domain.ids import ItemId, ItemKind
 from auto_biblio.domain.models import Item, Sighting, Signal, SignalKind, SourceType
-from auto_biblio.domain.triage import ScoredItem, ScoringReport, TriageRun
+from auto_biblio.domain.triage import ScoredItem, ScoringReport, TriageRun, TriageVerdict
 
 NOW = datetime(2026, 10, 10, 5, 0, tzinfo=UTC)
 
@@ -85,3 +85,20 @@ def make_run(week: str, items: tuple[ScoredItem, ...], generated_at: datetime = 
         scoring=ScoringReport(version="fixed-v1"),
         items=items,
     )
+
+
+def make_verdict(
+    ref: str = "i01",
+    scores: Mapping[ThemeId, int] | Mapping[str, int] | None = None,
+    **overrides: object,
+) -> TriageVerdict:
+    """Build a triage verdict from a {theme: score} mapping."""
+    base: dict[str, object] = {
+        "ref": ref,
+        "relevance": scores if scores is not None else {"agentic": 4},
+        "item_type": "tool",
+        "novelty": "high",
+        "confidence": "medium",
+        "reason": "Short reason.",
+    }
+    return TriageVerdict.model_validate(base | overrides)

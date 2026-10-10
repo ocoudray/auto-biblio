@@ -1,9 +1,8 @@
 import pytest
-from builders import make_item
+from builders import make_item, make_verdict
 
 from auto_biblio.domain.errors import LLMOutputInvalidError
-from auto_biblio.domain.features import ThemeId
-from auto_biblio.domain.triage import TriageBatch, TriageInput, TriageVerdict
+from auto_biblio.domain.triage import TriageBatch, TriageInput
 from auto_biblio.llm.prompts.triage_v1 import make_batches, system_prompt, to_inputs, triage_task
 from auto_biblio.repo_config.profile import Theme
 
@@ -41,14 +40,7 @@ def test_batches_respect_size() -> None:
 
 def test_task_validation() -> None:
     task = triage_task(inputs(2), THEMES)
-    verdict = TriageVerdict(
-        ref="i01",
-        relevance={ThemeId("agentic"): 4},
-        item_type="tool",
-        novelty="high",
-        confidence="high",
-        reason="ok",
-    )
+    verdict = make_verdict("i01", {"agentic": 4})
     with pytest.raises(LLMOutputInvalidError, match="missing"):
         task.validate(TriageBatch(verdicts=(verdict,)), "m")
     both = TriageBatch(verdicts=(verdict, verdict.model_copy(update={"ref": "i02"})))
