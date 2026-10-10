@@ -164,7 +164,7 @@ def display_theme(item: ScoredItem, weights: Mapping[ThemeId, float]) -> ThemeId
         the LLM did not triage; None if no theme applies.
     """
     scores = (
-        {t: weights.get(t, 0.0) * s for t, s in item.verdict.relevance.items()}
+        {t: weights.get(t, 0.0) * s for t, s in item.verdict.scores().items()}
         if item.verdict is not None
         else {t: weights.get(t, 0.0) * p for t, p in item.features.theme_percentile.items()}
     )
@@ -185,7 +185,7 @@ def passes_llm_gate(item: ScoredItem, llm_gate: int) -> bool:
     """
     if item.verdict is None:
         return True
-    return max(item.verdict.relevance.values(), default=0) > llm_gate
+    return max(item.verdict.scores().values(), default=0) > llm_gate
 
 
 def final_selection(

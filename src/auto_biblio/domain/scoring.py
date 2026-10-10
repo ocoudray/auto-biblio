@@ -145,7 +145,7 @@ def llm_relevance(verdict: TriageVerdict, weights: Mapping[ThemeId, float]) -> f
         `max_t(weight_t x relevance_t / 5)`, 0 without theme.
     """
     return max(
-        (weights.get(t, 0.0) * score / MAX_LLM_SCORE for t, score in verdict.relevance.items()),
+        (weights.get(t, 0.0) * score / MAX_LLM_SCORE for t, score in verdict.scores().items()),
         default=0.0,
     )
 

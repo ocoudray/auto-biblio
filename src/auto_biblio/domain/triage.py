@@ -1,8 +1,9 @@
 """Triage data: what the LLM sees and answers, and the weekly journal of decisions."""
 
-from typing import Literal
+from collections.abc import Mapping
+from typing import Literal, cast
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
 from auto_biblio.domain.errors import LLMOutputInvalidError
 from auto_biblio.domain.features import ContextLevel, FeatureVector, ThemeId
@@ -30,19 +31,50 @@ class TriageInput(BaseModel):
     context_level: ContextLevel
 
 
+class ThemeScore(BaseModel):
+    """Relevance of an item for one theme."""
+
+    model_config = ConfigDict(frozen=True)
+
+    theme: ThemeId
+    score: int
+
+
 class TriageVerdict(BaseModel):
     """The LLM's judgement on one item."""
 
     model_config = ConfigDict(frozen=True)
 
     ref: str
-    relevance: dict[ThemeId, int] = Field(
+    # A list of pairs rather than a mapping: some providers (Gemini) handle object schemas
+    # with free-form keys poorly in structured output.
+    relevance: tuple[ThemeScore, ...] = Field(
         description="Probable relevance from 0 to 5, only for the themes concerned."
     )
     item_type: ItemType
     novelty: Level
     confidence: Level
     reason: str = Field(description="One sentence, at most 30 words.")
+
+    @field_validator("relevance", mode="before")
+    @classmethod
+    def _accept_mapping(cls, value: object) -> object:
+        # Convenience for callers building verdicts by hand: {theme: score}.
+        if isinstance(value, Mapping):
+            pairs = cast("Mapping[str, int]", value)
+            return [{"theme": theme, "score": score} for theme, score in pairs.items()]
+        return value
+
+    def scores(self) -> dict[ThemeId, int]:
+        """Return the relevance per theme (the best score if a theme is repeated).
+
+        Returns:
+            Score per theme.
+        """
+        result: dict[ThemeId, int] = {}
+        for pair in self.relevance:
+            result[pair.theme] = max(pair.score, result.get(pair.theme, 0))
+        return result
 
 
 class TriageBatch(BaseModel):
@@ -77,10 +109,10 @@ def validate_batch(
         extra = sorted(set(answered) - refs)
         problems.append(f"refs must be exactly the batch refs (missing {missing}, extra {extra})")
     for verdict in batch.verdicts:
-        unknown = sorted(set(verdict.relevance) - themes)
+        unknown = sorted({pair.theme for pair in verdict.relevance} - themes)
         if unknown:
             problems.append(f"{verdict.ref}: unknown theme ids {unknown}")
-        if any(not 0 <= score <= 5 for score in verdict.relevance.values()):  # noqa: PLR2004 - the 0-5 scale is part of the output format
+        if any(not 0 <= pair.score <= 5 for pair in verdict.relevance):  # noqa: PLR2004 - the 0-5 scale is part of the output format
             problems.append(f"{verdict.ref}: relevance scores must be between 0 and 5")
         if len(verdict.reason.split()) > MAX_REASON_WORDS:
             problems.append(f"{verdict.ref}: reason longer than {MAX_REASON_WORDS} words")

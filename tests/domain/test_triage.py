@@ -105,3 +105,17 @@ def test_run_helpers() -> None:
     assert [s.item_id for s in run.selected()] == ["a:3", "a:1"]
     assert run.shown_ids() == {"a:1", "a:3"}
     assert run.usage_totals() == (0.01, 120)
+
+
+def test_scores_take_best_of_repeated_theme() -> None:
+    v = verdict("i01", relevance=[{"theme": T, "score": 2}, {"theme": T, "score": 4}])
+    assert v.scores() == {T: 4}
+    assert v.model_dump(mode="json")["relevance"] == [
+        {"theme": T, "score": 2},
+        {"theme": T, "score": 4},
+    ]
+
+
+def test_output_schema_has_no_free_form_keys() -> None:
+    schema = str(TriageBatch.model_json_schema())
+    assert "additionalProperties" not in schema
