@@ -76,3 +76,11 @@ def test_real_mail_sender() -> None:
     assert real_mail_sender(settings()) is None
     sender = real_mail_sender(settings(smtp_user="me@gmail.com", smtp_password=SecretStr("p")))
     assert isinstance(sender, SmtpMailSender)
+
+
+def test_empty_key_counts_as_missing() -> None:
+    # An unset GitHub secret reaches the workflow as an empty variable.
+    usable = usable_llm_config(
+        CONFIG, settings(gemini_api_key=SecretStr(""), anthropic_api_key=SecretStr("a"))
+    )
+    assert usable.chains["triage"] == ("haiku",)

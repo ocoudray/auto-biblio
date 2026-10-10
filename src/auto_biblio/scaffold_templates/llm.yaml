@@ -1,25 +1,30 @@
 # LLM catalogue, chains of models per role and weekly budget.
 # Model ids are pydantic-ai ids: "<provider>:<model>". Supported providers: google, anthropic.
 # Prices are per million tokens; 0 means a free quota. Checked on 2026-10-10:
-#   - gemini-3.5-flash-lite: free tier of Google AI Studio (paid tier ~0.30 / 2.50 USD).
-#   - claude-haiku-5-5: 0.10 / 0.50 USD (prompts up to 100K tokens).
+#   - gemini-3.5-flash-lite and gemma-4-31b-it: free tier of Google AI Studio, one key
+#     for both, separate rate limits per model.
+#   - to add a paid fallback later, e.g. Claude Haiku 5.5 (0.10 / 0.50 USD):
+#       haiku: {id: anthropic:claude-haiku-5-5, input_usd_per_mtok: 0.10,
+#               output_usd_per_mtok: 0.50, batch_size: 15}
+#     then append it to the chain and set the ANTHROPIC_API_KEY secret.
 models:
   flash-lite:
     id: google:gemini-3.5-flash-lite
     input_usd_per_mtok: 0
     output_usd_per_mtok: 0
     batch_size: 20
-  haiku:
-    id: anthropic:claude-haiku-5-5
-    input_usd_per_mtok: 0.10
-    output_usd_per_mtok: 0.50
-    batch_size: 15
+  gemma:
+    id: google:gemma-4-31b-it
+    input_usd_per_mtok: 0
+    output_usd_per_mtok: 0
+    batch_size: 10
 
-# Models tried in order; a model whose API key is missing is skipped.
+# Models tried in order: Gemma takes over when Flash-Lite hits its quota or fails.
+# A model whose API key is missing is skipped.
 chains:
-  triage: [flash-lite, haiku]
+  triage: [flash-lite, gemma]
 
 # Weekly caps: tokens count for every model, dollars for paid ones only.
 weekly_budget:
-  usd: 0.50
+  usd: 0
   tokens: 300000

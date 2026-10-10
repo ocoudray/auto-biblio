@@ -84,7 +84,7 @@ def test_scaffolded_triage_config(tmp_path: Path) -> None:
     llm = config.require_llm()
     assert [s.id for s in llm.chain("triage")] == [
         "google:gemini-3.5-flash-lite",
-        "anthropic:claude-haiku-5-5",
+        "google:gemma-4-31b-it",
     ]
 
 

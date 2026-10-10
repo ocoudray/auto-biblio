@@ -29,7 +29,9 @@ logger = logging.getLogger(__name__)
 def _api_key(provider: str, settings: Settings) -> str | None:
     keys = {"google": settings.gemini_api_key, "anthropic": settings.anthropic_api_key}
     secret = keys.get(provider)
-    return secret.get_secret_value() if secret is not None else None
+    # An unset GitHub secret reaches the workflow as an empty variable: treat it as missing.
+    value = secret.get_secret_value() if secret is not None else ""
+    return value or None
 
 
 def _callable(spec: ModelSpec, settings: Settings) -> bool:
