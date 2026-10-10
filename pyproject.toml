@@ -1,0 +1,74 @@
+[project]
+name = "auto-biblio"
+version = "0.1.0"
+description = "Routine to fetch automatically new research and development on AI, and give a recap of the most relevant advances"
+readme = "README.md"
+authors = [{ name = "Olivier COUDRAY", email = "olivier.coudray.15@polytechnique.org" }]
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.14",
+    "pydantic-settings>=2.15",
+]
+
+[dependency-groups]
+dev = [
+    "genbadge[coverage]>=1.1",
+    "pre-commit>=4.6",
+    "pyright>=1.1.414",
+    "pytest>=9.1",
+    "pytest-cov>=7.1",
+    "ruff>=0.16",
+]
+docs = [
+    "mkdocstrings-python>=2.0",
+    "zensical>=0.0.69",
+]
+
+[build-system]
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D203",   # conflicts with D211 (no blank line before class docstring)
+    "D213",   # conflicts with D212 (summary on the first docstring line)
+    "COM812", # conflicts with the ruff formatter
+    "ISC001", # conflicts with the ruff formatter
+    "CPY",    # no copyright header required
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "D", "PLR2004", "INP001"]
+"scripts/**" = ["INP001"]
+"examples/**" = ["INP001", "T201"]  # standalone scripts that print their result
+
+[tool.pyright]
+include = ["src", "tests", "examples"]
+typeCheckingMode = "strict"
+pythonVersion = "3.12"
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers --strict-config"
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+exclude_also = ["if TYPE_CHECKING:"]
+
+[tool.coverage.html]
+directory = "htmlcov"

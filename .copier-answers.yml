@@ -1,0 +1,13 @@
+# Changes here will be overwritten by Copier; do NOT edit manually
+_commit: v0.1.0
+_src_path: gh:ocoudray/template
+author_email: olivier.coudray.15@polytechnique.org
+author_name: Olivier COUDRAY
+features: []
+github_owner: ocoudray
+package_name: auto_biblio
+project_description: Routine to fetch automatically new research and development on
+    AI, and give a recap of the most relevant advances
+project_name: Auto Biblio Recap
+python_version: '3.12'
+repo_name: auto-biblio
