@@ -1,5 +1,6 @@
 """Builders for domain objects used across test modules."""
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
 
 from auto_biblio.domain.features import FeatureVector, ThemeId
