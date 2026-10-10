@@ -86,6 +86,8 @@ def test_scaffolded_triage_config(tmp_path: Path) -> None:
         "google:gemini-3.5-flash-lite",
         "google:gemma-4-31b-it",
     ]
+    llm.require("triage", "short_note", "deep_analysis", "synthesis")
+    assert llm.chain("deep_analysis")[0].id == "google:gemini-3.5-flash"
 
 
 def test_workflows_pin_the_version(tmp_path: Path) -> None:

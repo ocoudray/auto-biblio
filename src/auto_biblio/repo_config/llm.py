@@ -4,10 +4,12 @@ from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-Role = Literal["triage"]
-"""What a model is used for; later sub-projects add their own roles."""
+from auto_biblio.domain.errors import ConfigError
 
-ROLES: tuple[Role, ...] = ("triage",)
+Role = Literal["triage", "short_note", "deep_analysis", "synthesis"]
+"""What a model is used for."""
+
+LLM_PATH = "config/llm.yaml"
 
 
 class ModelSpec(BaseModel):
@@ -65,16 +67,29 @@ class LLMConfig(BaseModel):
 
     @model_validator(mode="after")
     def _chains_reference_known_models(self) -> Self:
-        for role in ROLES:
-            if role not in self.chains:
-                msg = f"missing chain for role {role!r}"
-                raise ValueError(msg)
         for role, names in self.chains.items():
             unknown = [name for name in names if name not in self.models]
             if unknown:
                 msg = f"chain {role!r} references unknown model(s): {', '.join(unknown)}"
                 raise ValueError(msg)
         return self
+
+    def require(self, *roles: Role) -> None:
+        """Check that every given role has a chain.
+
+        A chain is only needed by the step that uses the role, so that an older `llm.yaml`
+        keeps serving the steps it covers.
+
+        Args:
+            roles: The roles a step needs.
+
+        Raises:
+            ConfigError: If a role has no chain.
+        """
+        missing = [role for role in roles if role not in self.chains]
+        if missing:
+            msg = f"no chain for role(s) {', '.join(missing)}"
+            raise ConfigError(LLM_PATH, "chains", msg)
 
     def chain(self, role: Role) -> tuple[ModelSpec, ...]:
         """Return the models tried, in order, for a role.
@@ -84,5 +99,9 @@ class LLMConfig(BaseModel):
 
         Returns:
             The model specs of the chain.
+
+        Raises:
+            ConfigError: If the role has no chain.
         """
+        self.require(role)
         return tuple(self.models[name] for name in self.chains[role])

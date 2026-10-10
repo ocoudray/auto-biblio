@@ -106,6 +106,7 @@ class TriageStage:
         """
         self._config = config
         self._llm_config = config.require_llm()
+        self._llm_config.require("triage")
         self._cfg = config.triage
         self._view = ProfileView.of(config.profile)
         self._items = items
