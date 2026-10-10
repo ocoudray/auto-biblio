@@ -190,14 +190,15 @@ class FeatureVector(BaseModel):
     revenant: bool
     age_days: float
 
-    def model_inputs(self, llm_rel: float) -> dict[str, float]:
-        """Return the inputs of the learned scoring model, in a stable order.
+    def model_inputs(self, llm_rel: float | None) -> dict[str, float]:
+        """Return the inputs of the scoring models, in a stable order.
 
         Args:
-            llm_rel: Relevance given by the LLM, on [0, 1].
+            llm_rel: Relevance given by the LLM on [0, 1], None if the LLM did not triage.
 
         Returns:
-            Named numeric inputs, with one indicator per family and per context level.
+            Named numeric inputs, with an `unverified` indicator and one indicator per family
+            and per context level.
         """
         inputs = {
             "relevance": self.relevance,
@@ -205,7 +206,8 @@ class FeatureVector(BaseModel):
             "multi_source": multi_source(self.source_count),
             "watched": float(self.watched),
             "revenant": float(self.revenant),
-            "llm_rel": llm_rel,
+            "llm_rel": llm_rel or 0.0,
+            "unverified": float(llm_rel is None),
         }
         inputs.update({f"family_{f}": float(self.family == f) for f in FAMILIES})
         inputs.update({f"context_{c}": float(self.context_level == c) for c in CONTEXT_LEVELS})

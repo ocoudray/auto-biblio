@@ -113,6 +113,8 @@ class ScoredItem(BaseModel):
     prescore: float
     verdict: TriageVerdict | None = None
     """None when the LLM did not triage the item (budget, abandoned batch)."""
+    llm_rel: float | None = None
+    """LLM relevance on [0, 1], theme weights applied; None when not triaged."""
     final_score: float | None = None
     slot: Slot | None = None
     """None for a candidate that was not selected."""

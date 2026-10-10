@@ -2,12 +2,16 @@
 
 import math
 from itertools import count
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
 from auto_biblio.domain.errors import BudgetExhaustedError
 from auto_biblio.domain.triage import LLMUsage
 from auto_biblio.repo_config.llm import Budget, ModelSpec
+
+_USD: Literal["usd"] = "usd"
+_TOKENS: Literal["tokens"] = "tokens"
 
 
 class Reservation(BaseModel):
@@ -92,9 +96,9 @@ class BudgetLedger:
             BudgetExhaustedError: If either cap would be exceeded.
         """
         if usd > self.remaining_usd:
-            raise BudgetExhaustedError("usd", usd, self.remaining_usd)
+            raise BudgetExhaustedError(_USD, usd, self.remaining_usd)
         if tokens > self.remaining_tokens:
-            raise BudgetExhaustedError("tokens", tokens, self.remaining_tokens)
+            raise BudgetExhaustedError(_TOKENS, tokens, self.remaining_tokens)
         reservation = Reservation(id=next(self._ids), usd=usd, tokens=tokens)
         self._held[reservation.id] = reservation
         return reservation
