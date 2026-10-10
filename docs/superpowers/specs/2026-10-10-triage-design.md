@@ -268,15 +268,15 @@ models:
     input_usd_per_mtok: 0
     output_usd_per_mtok: 0
     batch_size: 20
-  haiku:
-    id: anthropic:claude-haiku-5-5         # tarif vérifié le 2026-10-10
-    input_usd_per_mtok: 0.10
-    output_usd_per_mtok: 0.50
-    batch_size: 15
+  gemma:
+    id: google:gemma-4-31b-it              # palier gratuit, même clé, quota distinct
+    input_usd_per_mtok: 0
+    output_usd_per_mtok: 0
+    batch_size: 10
 chains:
-  triage: [flash-lite, haiku]
+  triage: [flash-lite, gemma]                # Claude Haiku ajoutable plus tard en secours payant
 weekly_budget:
-  usd: 0.50
+  usd: 0
   tokens: 300000
 ```
 
