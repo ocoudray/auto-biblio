@@ -38,3 +38,18 @@ def test_collection_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     settings = load_settings()
     assert settings.http_timeout_s == 30.0
     assert settings.user_agent.startswith("auto-biblio/")
+
+
+def test_triage_settings_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AUTO_BIBLIO_GEMINI_API_KEY", "g")
+    monkeypatch.setenv("AUTO_BIBLIO_ANTHROPIC_API_KEY", "a")
+    monkeypatch.setenv("AUTO_BIBLIO_SMTP_PASSWORD", "p")
+    monkeypatch.setenv("AUTO_BIBLIO_DATA_REPO", "me/data")
+    settings = load_settings()
+    assert settings.gemini_api_key is not None
+    assert settings.anthropic_api_key is not None
+    assert settings.smtp_password is not None
+    assert settings.smtp_password.get_secret_value() == "p"
+    assert settings.data_repo == "me/data"
+    assert settings.smtp_host == "smtp.gmail.com"
+    assert settings.smtp_port == 465

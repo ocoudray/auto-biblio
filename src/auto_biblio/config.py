@@ -29,3 +29,13 @@ class Settings(BaseSettings):
     github_token: SecretStr | None = None
     http_timeout_s: float = 30.0
     user_agent: str = f"auto-biblio/{__version__} (+https://github.com/ocoudray/auto-biblio)"
+    data_repo: str | None = None
+    """`owner/repo` of the data repository: feedback links and feedback issues."""
+    gemini_api_key: SecretStr | None = None
+    anthropic_api_key: SecretStr | None = None
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 465
+    smtp_user: str | None = None
+    smtp_password: SecretStr | None = None
+    digest_to: str | None = None
+    embeddings_cache_dir: Path = Path(".cache/embeddings")

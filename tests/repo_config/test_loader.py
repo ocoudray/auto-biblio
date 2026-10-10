@@ -48,3 +48,44 @@ def test_invalid_field_message(tmp_path: Path) -> None:
     with pytest.raises(ConfigError) as excinfo:
         load_repo_config(write_repo(tmp_path, min_stars='"beaucoup"'))
     assert str(excinfo.value).startswith("config/sources.yaml: sources.2.github_search.min_stars:")
+
+
+LLM = """
+models:
+  flash: {id: "test:flash", input_usd_per_mtok: 0, output_usd_per_mtok: 0, batch_size: 20}
+chains: {triage: [flash]}
+weekly_budget: {usd: 0.5, tokens: 300000}
+"""
+
+
+def test_loader_reads_llm_and_triage(tmp_path: Path) -> None:
+    root = write_repo(tmp_path)
+    (root / "config" / "llm.yaml").write_text(LLM)
+    (root / "config" / "triage.yaml").write_text("selected: 12\n")
+    config = load_repo_config(root)
+    assert config.triage.selected == 12
+    assert config.require_llm().chain("triage")[0].id == "test:flash"
+
+
+def test_loader_triage_optional(tmp_path: Path) -> None:
+    config = load_repo_config(write_repo(tmp_path))
+    assert config.triage.selected == 18
+
+
+def test_loader_llm_required_only_when_used(tmp_path: Path) -> None:
+    config = load_repo_config(write_repo(tmp_path))
+    with pytest.raises(ConfigError, match=r"config/llm\.yaml"):
+        config.require_llm()
+
+
+def test_loader_invalid_triage(tmp_path: Path) -> None:
+    root = write_repo(tmp_path)
+    (root / "config" / "triage.yaml").write_text("relevance_gate: 2\n")
+    with pytest.raises(ConfigError, match=r"config/triage\.yaml: relevance_gate"):
+        load_repo_config(root)
+
+
+def test_empty_triage_file_means_defaults(tmp_path: Path) -> None:
+    root = write_repo(tmp_path)
+    (root / "config" / "triage.yaml").write_text("# nothing\n")
+    assert load_repo_config(root).triage.candidates == 50

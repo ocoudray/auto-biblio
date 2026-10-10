@@ -6,11 +6,16 @@ readme = "README.md"
 authors = [{ name = "Olivier COUDRAY", email = "olivier.coudray.15@polytechnique.org" }]
 requires-python = ">=3.12"
 dependencies = [
+    "fastembed>=0.9.0",
     "feedparser>=6.0.14",
     "httpx>=0.28.1",
+    "jinja2>=3.1.6",
+    "numpy>=2.5.3",
     "pydantic>=2.14",
+    "pydantic-ai-slim[anthropic,google]>=2.55.0",
     "pydantic-settings>=2.15",
     "pyyaml>=6.0.3",
+    "scikit-learn>=1.9.1",
     "typer>=0.27.3",
 ]
 
