@@ -51,3 +51,21 @@ def test_signal_and_batch_defaults() -> None:
     )
     assert SourceBatch().items == ()
     assert SourceBatch(signals=(signal,)).signals == (signal,)
+
+
+def test_item_normalizes_tags_and_links() -> None:
+    item = Item(
+        id=ItemId("url:0000000000000001"),
+        kind="blog_post",
+        title="T",
+        summary=None,
+        url="https://e.com/x",  # pyright: ignore[reportArgumentType]
+        authors=(),
+        published_at=None,
+        first_seen=NOW,
+        sightings=(make_sighting(),),
+        links=(ItemId("gh:b/b"), ItemId("gh:a/a"), ItemId("gh:b/b")),
+        tags=("llms", "ai", "llms"),
+    )
+    assert item.tags == ("ai", "llms")
+    assert item.links == ("gh:a/a", "gh:b/b")

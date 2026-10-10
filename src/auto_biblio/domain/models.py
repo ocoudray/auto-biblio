@@ -62,6 +62,13 @@ class Item(BaseModel):
             raise ValueError(msg)
         return value
 
+    @field_validator("links", "tags")
+    @classmethod
+    def _sorted_unique[T: str](cls, value: tuple[T, ...]) -> tuple[T, ...]:
+        # A canonical order makes equal items serialize identically, which keeps
+        # the stores idempotent whatever order the sources return.
+        return tuple(sorted(set(value)))
+
 
 class Signal(BaseModel):
     """A numeric popularity observation about an item at a point in time."""
