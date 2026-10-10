@@ -1,0 +1,14 @@
+<!doctype html><html><head><title>Durable Agents</title></head><body>
+<nav>arXiv navigation menu</nav>
+<article>
+<h1>Durable Agents: checkpointing long-running LLM agents</h1>
+<h2>1 Introduction</h2>
+<p>Long-running agents lose their state when a process crashes. We propose a harness that
+checkpoints every tool call and replays the log on restart, so that runs survive failures.
+Code is available at <a href="https://github.com/acme/durable-agents">our repository</a>.</p>
+<h2>2 Method</h2>
+<p>Each step writes an event to an append-only log; on restart, the harness replays the log
+and resumes from the last completed step, which keeps tool calls idempotent.</p>
+<h2>References</h2>
+<p>[1] Someone. A cited paper. https://example.org/cited</p>
+</article></body></html>
