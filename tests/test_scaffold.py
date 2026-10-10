@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from auto_biblio.repo_config.analysis import AnalysisConfig
 from auto_biblio.repo_config.loader import load_repo_config
 from auto_biblio.repo_config.triage import TriageConfig
 from auto_biblio.scaffold import ScaffoldExistsError, scaffold_data_repo
@@ -11,10 +12,12 @@ EXPECTED = [
     ".github/workflows/daily.yml",
     ".github/workflows/weekly.yml",
     ".gitignore",
+    "config/analysis.yaml",
     "config/llm.yaml",
     "config/profile.yaml",
     "config/sources.yaml",
     "config/triage.yaml",
+    "kb/.gitkeep",
     "state/.gitkeep",
 ]
 
@@ -81,6 +84,7 @@ def test_scaffolded_triage_config(tmp_path: Path) -> None:
     scaffold_data_repo(tmp_path, "1.2.3")
     config = load_repo_config(tmp_path)
     assert config.triage == TriageConfig()  # the template spells out the defaults
+    assert config.analysis == AnalysisConfig()
     llm = config.require_llm()
     assert [s.id for s in llm.chain("triage")] == [
         "google:gemini-3.5-flash-lite",
@@ -102,4 +106,7 @@ def test_workflows_pin_the_version(tmp_path: Path) -> None:
     assert "auto-biblio health" in daily
     assert "issues: write" in daily
     assert "auto-biblio triage" in weekly
+    assert "auto-biblio analyze" in weekly
+    assert "continue-on-error: true" in weekly
+    assert "git add state kb" in weekly
     assert '${WEEK:+--week "$WEEK"}' in weekly

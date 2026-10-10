@@ -13,11 +13,12 @@ _LAYOUT = {
     "config/sources.yaml": "sources.yaml",
     "config/llm.yaml": "llm.yaml",
     "config/triage.yaml": "triage.yaml",
+    "config/analysis.yaml": "analysis.yaml",
     ".github/workflows/daily.yml": "daily.yml",
     ".github/workflows/weekly.yml": "weekly.yml",
     ".gitignore": "gitignore",
 }
-_KEEP = "state/.gitkeep"
+_KEEP = ("state/.gitkeep", "kb/.gitkeep")
 
 
 class ScaffoldExistsError(AutoBiblioError):
@@ -49,14 +50,15 @@ def scaffold_data_repo(target: Path, version: str) -> list[Path]:
     Raises:
         ScaffoldExistsError: If a destination file already exists.
     """
-    destinations = [target / relative for relative in (*_LAYOUT, _KEEP)]
+    destinations = [target / relative for relative in (*_LAYOUT, *_KEEP)]
     existing = tuple(path for path in destinations if path.exists())
     if existing:
         raise ScaffoldExistsError(existing)
     for relative, template in _LAYOUT.items():
         content = _TEMPLATES.joinpath(template).read_text(encoding="utf-8")
         _write(target / relative, Template(content).substitute(version=version))
-    _write(target / _KEEP, "")
+    for keep in _KEEP:
+        _write(target / keep, "")
     return destinations
 
 

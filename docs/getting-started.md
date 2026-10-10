@@ -29,8 +29,9 @@ auto-biblio validate-config
 | `config/sources.yaml` | Sources to poll; add an entry to add a feed, an arXiv category… |
 | `config/llm.yaml` | Models used by the triage, fallback chain and weekly budget |
 | `config/triage.yaml` | Every decision constant of the triage (see [Triage](triage.md)) |
+| `config/analysis.yaml` | Notes and theme pages (see [Knowledge base](knowledge-base.md)) |
 | `.github/workflows/daily.yml` | Daily collection, signal refresh and feedback ingestion at 05:00 UTC |
-| `.github/workflows/weekly.yml` | Weekly triage and digest, Sunday 05:30 UTC |
+| `.github/workflows/weekly.yml` | Weekly triage, analysis and digest, Sunday 05:30 UTC |
 | `.gitignore`, `state/.gitkeep` | Repository skeleton |
 
 Push it to a **private** GitHub repository: the workflow commits `state/` after each run,
@@ -75,6 +76,7 @@ auto-biblio signals refresh              # re-read stars and upvotes of recent i
 auto-biblio feedback ingest              # record the 👍/👎 issues and close them
 auto-biblio triage                       # rank this week's items (LLM, within budget)
 auto-biblio triage --week 2026-W41       # re-run a week: cached answers cost nothing
+auto-biblio analyze                      # notes, theme page and changelog in kb/
 auto-biblio digest --dry-run digest.html # render without mailing
 auto-biblio digest                       # mail the latest triaged week
 auto-biblio eval scoring                 # fixed vs learned scoring, on reliable labels
@@ -118,6 +120,7 @@ make install   # .venv with every dependency group + pre-commit hooks
 make check     # lint, strict typecheck, tests (coverage >= 90 %), strict docs build
 uv run python examples/dedup.py     # cross-source deduplication, offline
 uv run python examples/scoring.py   # fair ranking across source families, offline
+uv run python examples/note.py      # a knowledge base note, offline
 ```
 
 | Command | What it does |
