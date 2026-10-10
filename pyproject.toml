@@ -6,6 +6,8 @@ readme = "README.md"
 authors = [{ name = "Olivier COUDRAY", email = "olivier.coudray.15@polytechnique.org" }]
 requires-python = ">=3.12"
 dependencies = [
+    "feedparser>=6.0.14",
+    "httpx>=0.28.1",
     "pydantic>=2.14",
     "pydantic-settings>=2.15",
     "pyyaml>=6.0.3",

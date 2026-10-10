@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+ <channel>
+  <atom:link href="https://huggingface.co/blog/feed.xml" rel="self" type="application/rss+xml"/>
+  <title>Hugging Face - Blog</title>
+  <link>https://huggingface.co/blog</link>
+  <description>The Hugging Face blog</description>
+  <language>en-US</language>
+  <item>
+   <title>Impactful scheduling for GPU clusters</title>
+   <pubDate>Fri, 09 Oct 2026 15:20:29 GMT</pubDate>
+   <link>https://arxiv.org/abs/2410.12345v1</link>
+   <guid isPermaLink="false">https://huggingface.co/blog/allenai/impactful-scheduling</guid>
+     <description>&lt;p&gt;A paper about &lt;i&gt;state spaces&lt;/i&gt;.&lt;/p&gt;</description>
+  </item>
+  <item>
+   <title>The model that didn&apos;t exist, so you made it yourself</title>
+   <link>https://huggingface.co/blog/building-with-ml-intern</link>
+   <guid isPermaLink="true">https://huggingface.co/blog/building-with-ml-intern</guid>
+  </item>
+  <item>
+   <title>Multimodal open d1 decision models for the edge</title>
+   <pubDate>Thu, 08 Oct 2026 10:00:00</pubDate>
+   <link>https://huggingface.co/blog/LiquidAI/open-d1</link>
+   <guid isPermaLink="false">https://huggingface.co/blog/LiquidAI/open-d1</guid>
+  </item>
+ </channel>
+</rss>
