@@ -1,0 +1,141 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/jCtqclg9RPqq24saiEXRV+xMOOw</id>
+  <title>arXiv Query: search_query=cat:cs.CL&amp;id_list=&amp;start=0&amp;max_results=3</title>
+  <updated>2026-10-10T09:32:26Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=cat:cs.CL&amp;start=0&amp;max_results=3&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>3</opensearch:itemsPerPage>
+  <opensearch:totalResults>121860</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2610.12427v1</id>
+    <title>FastBench: Can Streaming VLMs Perceive High-Dynamic Real-World Streams?</title>
+    <updated>2026-10-08T17:55:20Z</updated>
+    <link href="https://arxiv.org/abs/2610.12427v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.12427v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Streaming Video Large Language Models (VLMs) enable continuous video understanding, yet existing benchmarks focus on low-dynamic scenarios.</summary>
+    <category term="cs.CV" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-10-08T17:55:20Z</published>
+    <arxiv:primary_category term="cs.CV"/>
+    <author>
+      <name>Yuxuan Hu</name>
+    </author>
+    <author>
+      <name>Weikang Shi</name>
+    </author>
+    <author>
+      <name>Yang Bo</name>
+    </author>
+    <author>
+      <name>Xudong Lu</name>
+    </author>
+    <author>
+      <name>Xintong Guo</name>
+    </author>
+    <author>
+      <name>Shuhan Li</name>
+    </author>
+    <author>
+      <name>Yuyang He</name>
+    </author>
+    <author>
+      <name>Huankang Guan</name>
+    </author>
+    <author>
+      <name>Peiwen Sun</name>
+    </author>
+    <author>
+      <name>Yunqiao Yang</name>
+    </author>
+    <author>
+      <name>Wenbo Li</name>
+    </author>
+    <author>
+      <name>Rui Liu</name>
+    </author>
+    <author>
+      <name>Hongsheng Li</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2610.12417v1</id>
+    <title>WOVEN: Weaving Visual World Modeling into Multimodal LLMs</title>
+    <updated>2026-10-08T17:52:03Z</updated>
+    <link href="https://arxiv.org/abs/2610.12417v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.12417v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Multimodal large language models (MLLMs) struggle with spatial, embodied, physical, and temporal reasoning.</summary>
+    <category term="cs.CV" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-10-08T17:52:03Z</published>
+    <arxiv:primary_category term="cs.CV"/>
+    <author>
+      <name>Zheyu Fan</name>
+    </author>
+    <author>
+      <name>Yue Zhang</name>
+    </author>
+    <author>
+      <name>Mingkai Deng</name>
+    </author>
+    <author>
+      <name>Kangrui Wang</name>
+    </author>
+    <author>
+      <name>Qineng Wang</name>
+    </author>
+    <author>
+      <name>Canyu Chen</name>
+    </author>
+    <author>
+      <name>Jie Hao</name>
+    </author>
+    <author>
+      <name>Xing Fan</name>
+    </author>
+    <author>
+      <name>Chenlei Guo</name>
+    </author>
+    <author>
+      <name>Eric P. Xing</name>
+    </author>
+    <author>
+      <name>Mohit Bansal</name>
+    </author>
+    <author>
+      <name>Manling Li</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2610.12410v1</id>
+    <title>Predicting Alignment Generalization with Value Representations</title>
+    <updated>2026-10-08T17:47:26Z</updated>
+    <link href="https://arxiv.org/abs/2610.12410v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2610.12410v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>LLM developers post-train their models to exhibit prosocial values and behavioral traits, which are enumerated in an alignment target.</summary>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-10-08T17:47:26Z</published>
+    <arxiv:primary_category term="cs.CL"/>
+    <author>
+      <name>Andy Liu</name>
+    </author>
+    <author>
+      <name>Mehar Bhatia</name>
+    </author>
+    <author>
+      <name>Karolina Stanczak</name>
+    </author>
+    <author>
+      <name>Mona Diab</name>
+    </author>
+    <author>
+      <name>Vered Shwartz</name>
+    </author>
+    <author>
+      <name>Daniel Fried</name>
+    </author>
+  </entry>
+</feed>
