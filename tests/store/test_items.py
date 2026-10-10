@@ -70,3 +70,23 @@ def test_merge_moving_first_seen_month_moves_partition(tmp_path: Path) -> None:
     store.flush()
     assert not (tmp_path / "items" / "2026-10.jsonl").exists()
     assert (tmp_path / "items" / "2026-08.jsonl").read_text().count("\n") == 1
+
+
+def test_distinct_arxiv_papers_with_same_title_are_kept(tmp_path: Path) -> None:
+    store = ItemStore.open(tmp_path)
+    assert store.upsert(make_item(item_id="arxiv:2401.00001", title="Scaling Laws")) == "new"
+    assert store.upsert(make_item(item_id="arxiv:2501.00002", title="Scaling laws")) == "new"
+
+
+def test_title_index_follows_retitled_items(tmp_path: Path) -> None:
+    store = ItemStore.open(tmp_path)
+    store.upsert(make_item(source_type="hackernews", title="Show HN title"))
+    store.upsert(make_item(title="Real arXiv title"))
+    outcome = store.upsert(make_item(item_id="url:00000000000000aa", title="Show HN title"))
+    assert outcome == "new"
+    assert (
+        store.upsert(
+            make_item(item_id="url:00000000000000bb", source_type="rss", title="real arxiv title")
+        )
+        == "merged"
+    )

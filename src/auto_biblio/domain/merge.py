@@ -48,7 +48,7 @@ def merge_items(existing: Item, incoming: Item) -> Item:
     Raises:
         ValueError: If the two items are not the same content.
     """
-    if not _same_content(existing, incoming):
+    if not same_content(existing, incoming):
         msg = f"cannot merge different items {existing.id} and {incoming.id}"
         raise ValueError(msg)
     winner, other = (
@@ -71,10 +71,27 @@ def merge_items(existing: Item, incoming: Item) -> Item:
     )
 
 
-def _same_content(a: Item, b: Item) -> bool:
+def same_content(a: Item, b: Item) -> bool:
+    """Tell whether two items describe the same content.
+
+    Equal ids always match. Papers also match on their normalized title, but only
+    when one of them lacks a canonical identity (a ``url:`` id): two distinct arXiv
+    or DOI ids are distinct papers, whatever their titles.
+
+    Args:
+        a: First item.
+        b: Second item.
+
+    Returns:
+        Whether the items can be merged.
+    """
     if a.id == b.id:
         return True
-    return a.kind == b.kind == "paper" and normalized_title(a.title) == normalized_title(b.title)
+    return (
+        a.kind == b.kind == "paper"
+        and (a.id.startswith("url:") or b.id.startswith("url:"))
+        and normalized_title(a.title) == normalized_title(b.title)
+    )
 
 
 def _best_rank(item: Item) -> int:

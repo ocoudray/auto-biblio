@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Literal, Self
 
 from auto_biblio.domain.ids import ItemId
-from auto_biblio.domain.merge import merge_items, normalized_title
+from auto_biblio.domain.merge import merge_items, normalized_title, same_content
 from auto_biblio.domain.models import Item
 from auto_biblio.store._files import atomic_write_text, month_key, read_lines
 
@@ -22,10 +22,10 @@ class ItemStore:
             items: Loaded items by id.
         """
         self._dir = directory
-        self._items = items
-        self._by_title = {
-            normalized_title(i.title): i.id for i in items.values() if i.kind == "paper"
-        }
+        self._items: dict[ItemId, Item] = {}
+        self._by_title: dict[str, ItemId] = {}
+        for item in items.values():
+            self._index(item)
         self._dirty: set[str] = set()
 
     @classmethod
@@ -69,6 +69,7 @@ class ItemStore:
         if merged == existing:
             return "unchanged"
         self._dirty.add(_partition(existing))
+        self._unindex(existing)
         self._put(merged)
         return "merged"
 
@@ -88,16 +89,25 @@ class ItemStore:
     def _find(self, item: Item) -> Item | None:
         if item.id in self._items:
             return self._items[item.id]
-        if item.kind == "paper":
-            match = self._by_title.get(normalized_title(item.title))
-            return self._items.get(match) if match is not None else None
-        return None
+        if item.kind != "paper":
+            return None
+        match = self._by_title.get(normalized_title(item.title))
+        candidate = self._items.get(match) if match is not None else None
+        return candidate if candidate is not None and same_content(candidate, item) else None
 
     def _put(self, item: Item) -> None:
+        self._index(item)
+        self._dirty.add(_partition(item))
+
+    def _index(self, item: Item) -> None:
         self._items[item.id] = item
         if item.kind == "paper":
             self._by_title.setdefault(normalized_title(item.title), item.id)
-        self._dirty.add(_partition(item))
+
+    def _unindex(self, item: Item) -> None:
+        key = normalized_title(item.title)
+        if self._by_title.get(key) == item.id:
+            del self._by_title[key]
 
 
 def _partition(item: Item) -> str:

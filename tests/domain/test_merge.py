@@ -71,3 +71,11 @@ def test_normalized_title() -> None:
     assert normalized_title("  Mamba: Linear-Time  Sequence Modeling! ") == (
         "mamba linear-time sequence modeling"
     )
+
+
+def test_merge_rejects_distinct_canonical_papers_with_same_title() -> None:
+    with pytest.raises(ValueError, match="different"):
+        merge_items(
+            make_item(item_id="arxiv:2401.00001", title="Scaling Laws"),
+            make_item(item_id="arxiv:2501.00002", title="Scaling laws"),
+        )
