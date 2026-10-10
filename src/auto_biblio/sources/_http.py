@@ -4,8 +4,9 @@ import time
 from collections.abc import Callable, Mapping
 
 import httpx
+from pydantic import TypeAdapter, ValidationError
 
-from auto_biblio.domain.errors import SourceUnavailableError
+from auto_biblio.domain.errors import SourcePayloadError, SourceUnavailableError
 
 
 class Throttle:
@@ -69,3 +70,24 @@ def get(
         message = f"HTTP {response.status_code} from {url}"
         raise SourceUnavailableError(source, message)
     return response
+
+
+def parse_json[T](response: httpx.Response, adapter: TypeAdapter[T], *, source: str) -> T:
+    """Validate a JSON response body against a model.
+
+    Args:
+        response: Successful response.
+        adapter: Expected shape of the body.
+        source: Source name, for error messages.
+
+    Returns:
+        The validated body.
+
+    Raises:
+        SourcePayloadError: If the body is not JSON or does not match the model.
+    """
+    try:
+        return adapter.validate_json(response.content)
+    except ValidationError as exc:
+        message = f"unexpected payload: {exc.errors()[0]['msg']}"
+        raise SourcePayloadError(source, message, response.text) from exc
