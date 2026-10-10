@@ -11,5 +11,6 @@ def run_example(name: str, capsys: pytest.CaptureFixture[str]) -> str:
     return capsys.readouterr().out
 
 
-def test_quickstart_example(capsys: pytest.CaptureFixture[str]) -> None:
-    assert run_example("quickstart.py", capsys).strip() == "Hello, Ada!"
+def test_dedup_example(capsys: pytest.CaptureFixture[str]) -> None:
+    output = run_example("dedup.py", capsys).strip()
+    assert output == "arxiv:2410.12345 — 3 sightings (arxiv, hf-papers, hn)"

@@ -4,23 +4,28 @@
 [![Coverage](https://ocoudray.github.io/auto-biblio/badges/coverage.svg)](https://ocoudray.github.io/auto-biblio/coverage-report/)
 [![Docs](https://img.shields.io/badge/docs-zensical-blue)](https://ocoudray.github.io/auto-biblio/)
 
-Routine to fetch automatically new research and development on AI, and give a recap of the most relevant advances
+An automated watch on AI research and engineering. It collects new papers, repositories,
+releases, blog posts and discussions (arXiv, Hugging Face Daily Papers, GitHub, Hacker News,
+RSS), deduplicates them across sources and stores them in a separate data repository. Triage,
+analysis and the weekly digest come in the next sub-projects (see the
+[vision](docs/superpowers/specs/2026-10-10-auto-biblio-vision-design.md)).
 
 ## Quickstart
+
+```bash
+uv tool install git+https://github.com/ocoudray/auto-biblio
+auto-biblio init ~/auto-biblio-data      # config + daily GitHub Actions workflow
+auto-biblio collect --data-dir ~/auto-biblio-data
+```
+
+## Develop
 
 Requires [uv](https://docs.astral.sh/uv/) and `make`.
 
 ```bash
 make install   # create .venv with all dependency groups + install pre-commit hooks
 make check     # lint, typecheck, tests (coverage >= 90 %), strict docs build
-```
-
-## Try it
-
-Each enabled use case ships a minimal, runnable example:
-
-```bash
-uv run python examples/quickstart.py   # library: call the core logic
+uv run python examples/dedup.py   # cross-source deduplication, offline
 ```
 
 See the [documentation](https://ocoudray.github.io/auto-biblio/) for details.
