@@ -142,3 +142,17 @@ class FeedbackParseError(AutoBiblioError):
 
 class MailDeliveryError(AutoBiblioError):
     """The digest could not be sent."""
+
+
+class TriageRunMissingError(AutoBiblioError):
+    """No triage journal exists for the requested week."""
+
+    def __init__(self, week: str | None) -> None:
+        """Build the error.
+
+        Args:
+            week: The requested week, or None for "the latest one".
+        """
+        self.week = week
+        what = f"week {week}" if week else "any week"
+        super().__init__(f"no triage journal for {what}: run `auto-biblio triage` first")
