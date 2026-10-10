@@ -1,0 +1,25 @@
+# Sources polled by `auto-biblio collect`. Add an entry to add a source instance;
+# a new `type` needs a new connector in auto-biblio.
+sources:
+  # Academic
+  - {name: arxiv, type: arxiv, categories: [cs.CL, cs.LG, cs.CV, cs.AI], max_results: 2000, min_interval_s: 3}
+  - {name: hf-papers, type: hf_papers}
+
+  # Applied: repositories and releases (watched repos come from profile.yaml)
+  - {name: github-rising, type: github_search, topics: [llm, agents, rag, ocr, document-ai, tabular], min_stars: 50, created_within_days: 30, min_interval_s: 2}
+  - {name: github-releases, type: github_releases}
+
+  # Applied: lab and vendor blogs
+  - {name: huggingface-blog, type: rss, url: "https://huggingface.co/blog/feed.xml", family: applied}
+  - {name: openai-news, type: rss, url: "https://openai.com/news/rss.xml", family: applied}
+  - {name: deepmind-blog, type: rss, url: "https://deepmind.google/blog/rss.xml", family: applied}
+  - {name: langchain-blog, type: rss, url: "https://www.langchain.com/blog/rss.xml", family: applied}
+  # No official feed (checked 2026-10-10): Anthropic news, LlamaIndex blog, The Batch.
+
+  # Community
+  - {name: hn, type: hackernews, min_points: 30}
+  - {name: r-machinelearning, type: rss, url: "https://www.reddit.com/r/MachineLearning/top/.rss?t=day", family: community, min_interval_s: 5}
+  - {name: r-localllama, type: rss, url: "https://www.reddit.com/r/LocalLLaMA/top/.rss?t=day", family: community, min_interval_s: 5}
+  - {name: simon-willison, type: rss, url: "https://simonwillison.net/atom/everything/", family: community}
+  - {name: import-ai, type: rss, url: "https://importai.substack.com/feed", family: community}
+  - {name: latent-space, type: rss, url: "https://www.latent.space/feed", family: community}

@@ -1,0 +1,74 @@
+# Interest profile: what auto-biblio considers relevant.
+# `description` is embedded and used as the semantic anchor of each theme: keep it specific.
+themes:
+  - id: agentic
+    label: Architectures agentiques
+    weight: 1.0
+    description: >
+      Agentic architectures: multi-agent orchestration, agent harnesses, skills, tool use,
+      Model Context Protocol (MCP), agent memory, evaluation of agents and design patterns
+      for running agents in production.
+    keywords: [agent, multi-agent, agentic, tool use, function calling, MCP, harness, skills]
+    exclude: [reinforcement learning for robotics]
+    watch:
+      repos: [pydantic/pydantic-ai, anthropics/claude-code]
+
+  - id: rag-scale
+    label: RAG à l'échelle
+    weight: 1.0
+    description: >
+      Retrieval-augmented generation at scale: hybrid retrieval, reranking, GraphRAG,
+      indexing very large corpora, long-context versus retrieval trade-offs and RAG evaluation.
+    keywords: [RAG, retrieval-augmented, reranking, GraphRAG, hybrid search, vector database]
+
+  - id: tabular-fm
+    label: Modèles fondation tabulaires vs AutoML
+    weight: 1.0
+    description: >
+      Foundation models for tabular data (TabPFN, TabICL, CARTE and successors) and their
+      comparison with AutoML systems such as AutoGluon and FLAML on real tabular benchmarks.
+    keywords: [tabular, TabPFN, TabICL, in-context learning tabular, AutoML, AutoGluon, FLAML]
+    watch:
+      repos: [PriorLabs/TabPFN, autogluon/autogluon]
+
+  - id: llm-arch
+    label: Architectures LLM et VLM
+    weight: 1.0
+    description: >
+      New architectures for language and vision-language models: state space models (Mamba),
+      joint-embedding predictive architectures (JEPA), mixture of experts, linear attention
+      and hybrid architectures.
+    keywords: [Mamba, state space model, JEPA, mixture of experts, MoE, linear attention, hybrid architecture]
+    watch:
+      repos: [state-spaces/mamba]
+
+  - id: ai-dev-practices
+    label: Bonnes pratiques de développement IA
+    weight: 1.0
+    description: >
+      Engineering practices for building AI solutions in Python: Rust-based tooling (uv, ruff,
+      polars), typed validation with pydantic, pydantic-ai, testing, evaluation and
+      production patterns for LLM applications.
+    keywords: [uv, ruff, polars, pydantic, pydantic-ai, LLM engineering, evals]
+    watch:
+      repos: [astral-sh/uv, astral-sh/ruff, pola-rs/polars, pydantic/pydantic]
+
+  - id: vlm-vs-ocr
+    label: Multimodal dans les VLM vs OCR
+    weight: 1.0
+    description: >
+      Vision-language models applied directly to documents, compared with classic OCR
+      pipelines: accuracy, cost, layout understanding and hallucination on document tasks.
+    keywords: [VLM, vision-language, OCR-free, document understanding, OCR]
+
+  - id: doc-dataification
+    label: Dataification de documents
+    weight: 1.0
+    description: >
+      Turning documents into structured data: OCR that preserves structure, layout parsing,
+      table extraction, PDF to Markdown conversion, tools such as Docling and Marker.
+    keywords: [layout analysis, table extraction, PDF parsing, document conversion, Docling, Marker]
+    watch:
+      repos: [docling-project/docling, datalab-to/marker]
+
+global_exclude: [crypto, cryptocurrency]
