@@ -1,48 +1,10 @@
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 
 import pytest
+from builders import NOW, make_item
 
 from auto_biblio.domain.ids import ItemId
 from auto_biblio.domain.merge import merge_items, normalized_title
-from auto_biblio.domain.models import Item, Sighting, SourceType
-
-NOW = datetime(2026, 10, 10, 5, 0, tzinfo=UTC)
-
-
-def make_item(  # noqa: PLR0913 - test builder mirrors the model's fields
-    *,
-    item_id: str = "arxiv:2410.12345",
-    source_type: SourceType = "arxiv",
-    source: str | None = None,
-    title: str = "Title",
-    summary: str | None = "summary",
-    seen_at: datetime = NOW,
-    links: tuple[str, ...] = (),
-    tags: tuple[str, ...] = (),
-    kind: str = "paper",
-) -> Item:
-    return Item.model_validate(
-        {
-            "id": item_id,
-            "kind": kind,
-            "title": title,
-            "summary": summary,
-            "url": "https://example.com/x",
-            "authors": ("A",),
-            "published_at": None,
-            "first_seen": seen_at,
-            "sightings": (
-                Sighting(
-                    source=source or source_type,
-                    source_type=source_type,
-                    seen_at=seen_at,
-                    origin_url=f"https://{source_type}.example/x",
-                ),
-            ),
-            "links": links,
-            "tags": tags,
-        }
-    )
 
 
 def test_merge_unions_are_sorted_and_deduplicated() -> None:

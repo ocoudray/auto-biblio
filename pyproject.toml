@@ -58,6 +58,7 @@ typeCheckingMode = "strict"
 pythonVersion = "3.12"
 venvPath = "."
 venv = ".venv"
+extraPaths = ["tests"]  # shared test builders (tests/builders.py)
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
