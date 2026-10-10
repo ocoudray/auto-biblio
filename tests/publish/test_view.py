@@ -1,11 +1,15 @@
 from datetime import timedelta
+from pathlib import PurePosixPath
 
 from builders import NOW, make_features, make_item, make_run, make_verdict
 
+from auto_biblio.domain.features import ThemeId
 from auto_biblio.domain.ids import ItemId
+from auto_biblio.domain.kb.changelog import ChangelogEntry, NoteChange
+from auto_biblio.domain.kb.pages import RemovedLink
 from auto_biblio.domain.run_report import RunReport, SourceReport, SourceStatus
 from auto_biblio.domain.triage import ScoredItem, ScoringReport
-from auto_biblio.publish.view import HealthSummary, build_view
+from auto_biblio.publish.view import HealthSummary, NoteLink, build_view, kb_changes
 from auto_biblio.repo_config.profile import Profile
 
 PROFILE = Profile.model_validate(
@@ -113,3 +117,58 @@ def test_health_counts_consecutive_failures() -> None:
         ("import-ai", 3)
     ]
     assert HealthSummary.from_runs([report(2, "failed"), report(1, "ok")]).failing_sources == ()
+
+
+def test_note_links_and_verdict() -> None:
+    run = make_run("2026-W41", (scored("a:1", "agentic", 0.9),))
+    links = {
+        ItemId("a:1"): NoteLink(
+            url="https://github.com/me/data/blob/main/kb/notes/papers/a-1.md", verdict="À lire."
+        )
+    }
+    view = build_view(
+        run, {ItemId("a:1"): make_item(item_id="a:1")}, PROFILE, HealthSummary(), None, notes=links
+    )
+    line = view.sections[0].items[0]
+    assert line.note_url is not None
+    assert line.note_url.endswith("kb/notes/papers/a-1.md")
+    assert line.verdict == "À lire."
+    assert view.kb_changes.is_empty
+
+
+def test_kb_changes_section() -> None:
+    entry = ChangelogEntry(
+        week="2026-W41",
+        notes=(
+            NoteChange(
+                note_id=ItemId("a:1"),
+                title="T",
+                kind="paper",
+                change="deepened",
+                depth="deep",
+                source_text="full_text",
+            ),
+            NoteChange(
+                note_id=ItemId("a:2"),
+                title="U",
+                kind="paper",
+                change="created",
+                depth="short",
+                source_text="abstract",
+            ),
+        ),
+        theme=ThemeId("agentic"),
+        links_removed=(RemovedLink(url="https://old", reason="Dead."),),
+    )
+    changes = kb_changes(
+        entry, {ItemId("a:1"): PurePosixPath("notes/papers/a-1.md")}, PROFILE, "me/data"
+    )
+    assert [(c.title, c.change, c.url) for c in changes.notes] == [
+        ("T", "fiche approfondie", "https://github.com/me/data/blob/main/kb/notes/papers/a-1.md"),
+        ("U", "nouvelle fiche", None),
+    ]
+    assert changes.theme == "Agents"
+    assert changes.theme_url == "https://github.com/me/data/blob/main/kb/themes/agentic.md"
+    assert changes.links_removed == ("https://old : Dead.",)
+    assert not changes.is_empty
+    assert kb_changes(ChangelogEntry(week="w"), {}, PROFILE, None).theme_url is None

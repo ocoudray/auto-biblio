@@ -5,7 +5,11 @@
   {%- if item.unverified %} <span style="font-size:11px;background:#f3f4f6;color:#4b5563;padding:1px 6px;border-radius:8px;">non vérifié</span>{% endif %}
   <div style="font-size:12px;color:#6b7280;margin-top:2px;">{{ item.sources }}{% if item.item_type %} · {{ item.item_type }}{% endif %}</div>
   {%- if item.reason %}<div style="font-size:14px;color:#111827;margin-top:4px;">{{ item.reason }}</div>{% endif %}
-  {%- if item.up_url %}<div style="font-size:13px;margin-top:4px;"><a href="{{ item.up_url }}" style="text-decoration:none;">👍</a> &nbsp; <a href="{{ item.down_url }}" style="text-decoration:none;">👎</a></div>{% endif %}
+  {%- if item.verdict %}<div style="font-size:14px;color:#065f46;margin-top:4px;">Analyse : {{ item.verdict }}</div>{% endif %}
+  {%- if item.up_url or item.note_url %}<div style="font-size:13px;margin-top:4px;">
+    {%- if item.note_url %}<a href="{{ item.note_url }}" style="text-decoration:none;">fiche</a>{% endif %}
+    {%- if item.note_url and item.up_url %} &nbsp; {% endif %}
+    {%- if item.up_url %}<a href="{{ item.up_url }}" style="text-decoration:none;">👍</a> &nbsp; <a href="{{ item.down_url }}" style="text-decoration:none;">👎</a>{% endif %}</div>{% endif %}
 </td></tr>
 {%- endmacro -%}
 <!doctype html>
@@ -21,6 +25,20 @@
 {%- if view.discoveries %}
 <tr><td><h2 style="font-size:16px;margin:20px 0 4px;">Découvertes <span style="font-size:12px;font-weight:400;color:#6b7280;">hors de tes thèmes</span></h2></td></tr>
 {%- for item in view.discoveries %}{{ line(item) }}{% endfor %}
+{%- endif %}
+{%- if not view.kb_changes.is_empty %}
+<tr><td><h2 style="font-size:16px;margin:20px 0 4px;">Évolutions de la base</h2>
+<ul style="font-size:13px;color:#111827;padding-left:18px;margin:0;">
+  {%- for change in view.kb_changes.notes %}
+  <li>{% if change.url %}<a href="{{ change.url }}">{{ change.title }}</a>{% else %}{{ change.title }}{% endif %} : {{ change.change }}</li>
+  {%- endfor %}
+  {%- if view.kb_changes.theme %}
+  <li>Page thème {% if view.kb_changes.theme_url %}<a href="{{ view.kb_changes.theme_url }}">{{ view.kb_changes.theme }}</a>{% else %}{{ view.kb_changes.theme }}{% endif %} réécrite</li>
+  {%- endif %}
+  {%- for removed in view.kb_changes.links_removed %}
+  <li>Lien retiré : {{ removed }}</li>
+  {%- endfor %}
+</ul></td></tr>
 {%- endif %}
 <tr><td style="padding-top:24px;font-size:12px;color:#6b7280;">
   <strong>Santé du pipeline</strong><br>
