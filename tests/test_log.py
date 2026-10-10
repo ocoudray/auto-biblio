@@ -1,4 +1,5 @@
 import logging
+from importlib.metadata import version
 
 from auto_biblio import __version__
 from auto_biblio.log import configure_logging
@@ -10,4 +11,4 @@ def test_configure_logging_sets_root_level() -> None:
 
 
 def test_version_is_exposed() -> None:
-    assert __version__ == "0.1.0"
+    assert __version__ == version("auto-biblio")
