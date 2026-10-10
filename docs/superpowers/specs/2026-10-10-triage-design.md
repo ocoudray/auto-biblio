@@ -130,20 +130,22 @@ ContextLevel = Literal["title_only", "snippet", "abstract"]
 
 ```python
 class TriageInput(BaseModel):
-    ref: str                          # "i07" : référence courte, propre au lot
+    ref: str  # "i07" : référence courte, propre au lot
     title: str
     text: str | None
     source: str
     kind: ItemKind
     context_level: ContextLevel
 
+
 class TriageVerdict(BaseModel):
     ref: str
-    relevance: dict[ThemeId, int]     # de 0 à 5, uniquement pour les thèmes concernés
+    relevance: dict[ThemeId, int]  # de 0 à 5, uniquement pour les thèmes concernés
     item_type: Literal["advance", "tool", "survey", "opinion", "other"]
     novelty: Literal["low", "medium", "high"]
     confidence: Literal["low", "medium", "high"]
-    reason: str                       # une phrase, au plus 30 mots
+    reason: str  # une phrase, au plus 30 mots
+
 
 class TriageBatch(BaseModel):
     verdicts: tuple[TriageVerdict, ...]
@@ -167,26 +169,28 @@ class ScoredItem(BaseModel):
     item_id: ItemId
     features: FeatureVector
     prescore: float
-    verdict: TriageVerdict | None     # None : non trié (budget épuisé, lot abandonné)
+    verdict: TriageVerdict | None  # None : non trié (budget épuisé, lot abandonné)
     final_score: float | None
-    slot: Literal["theme", "discovery"] | None   # None : candidat non retenu
-    theme: ThemeId | None             # thème sous lequel l'item apparaît dans le digest
+    slot: Literal["theme", "discovery"] | None  # None : candidat non retenu
+    theme: ThemeId | None  # thème sous lequel l'item apparaît dans le digest
+
 
 class ScoringReport(BaseModel):
-    version: str                      # "fixed-v1" ou "learned-<date>"
+    version: str  # "fixed-v1" ou "learned-<date>"
     reliable_labels: int
     auc_without_weak: float | None
     auc_with_weak: float | None
-    coefficients: dict[str, float]    # vide pour les poids fixes
+    coefficients: dict[str, float]  # vide pour les poids fixes
+
 
 class TriageRun(BaseModel):
-    week: str                         # semaine ISO, "2026-W41"
+    week: str  # semaine ISO, "2026-W41"
     run_id: str
     generated_at: AwareDatetime
     scoring: ScoringReport
-    items: tuple[ScoredItem, ...]     # tous les candidats, retenus ou non
+    items: tuple[ScoredItem, ...]  # tous les candidats, retenus ou non
     usage: tuple[LLMUsage, ...]
-    degradations: tuple[str, ...]     # bascules, budget atteint, mode dégradé…
+    degradations: tuple[str, ...]  # bascules, budget atteint, mode dégradé…
 ```
 
 Le journal garde aussi les **candidats non retenus**. Ils servent à l'apprentissage (§5.9) et à
@@ -198,10 +202,10 @@ comprendre a posteriori pourquoi un item a été écarté.
 class FeedbackEvent(BaseModel):
     item_id: ItemId
     polarity: Literal[1, -1]
-    channel: Literal["explicit"]      # "implicit" sera ajouté par le sous-projet 5
+    channel: Literal["explicit"]  # "implicit" sera ajouté par le sous-projet 5
     at: AwareDatetime
     digest_week: str | None
-    origin: str                       # "issue#123"
+    origin: str  # "issue#123"
 ```
 
 **Issue de feedback :**
@@ -220,11 +224,13 @@ ajoute le label `feedback-invalid` et l'issue reste ouverte.
 class StructuredLLM(Protocol):
     def run[T: BaseModel](self, task: LLMTask[T]) -> LLMResult[T]: ...
 
+
 class LLMTask[T: BaseModel](BaseModel):
-    role: Literal["triage"]           # les autres rôles arrivent avec le sous-projet 3
+    role: Literal["triage"]  # les autres rôles arrivent avec le sous-projet 3
     prompt_version: str
     payload: BaseModel
     output_type: type[T]
+
 
 class LLMUsage(BaseModel):
     role: str
@@ -234,6 +240,7 @@ class LLMUsage(BaseModel):
     cost_usd: float
     cached: bool
     fallback_from: str | None
+
 
 class LLMResult[T: BaseModel](BaseModel):
     output: T
