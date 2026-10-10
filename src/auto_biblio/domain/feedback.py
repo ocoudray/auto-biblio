@@ -2,6 +2,7 @@
 
 import re
 from typing import Literal
+from urllib.parse import urlencode
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict
 
@@ -78,3 +79,22 @@ def parse_issue_week(body: str | None) -> str | None:
         return None
     match = _WEEK.search(body)
     return match.group(1) if match else None
+
+
+def feedback_issue_url(repo: str, item_id: ItemId, polarity: Polarity, week: str) -> str:
+    """Build the link that opens a prefilled feedback issue.
+
+    Args:
+        repo: `owner/repo` of the data repository.
+        item_id: The item.
+        polarity: 1 for 👍, -1 for 👎.
+        week: ISO week of the digest.
+
+    Returns:
+        A `github.com/.../issues/new` URL.
+    """
+    thumb = "👍" if polarity == 1 else "👎"
+    query = urlencode(
+        {"labels": "feedback", "title": f"{thumb} {item_id}", "body": f"week: {week}"}
+    )
+    return f"https://github.com/{repo}/issues/new?{query}"
