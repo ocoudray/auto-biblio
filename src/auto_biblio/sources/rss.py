@@ -1,6 +1,7 @@
 """Generic RSS/Atom connector: blogs, newsletters, subreddits."""
 
 from datetime import datetime
+from urllib.parse import urljoin
 
 import httpx
 
@@ -55,18 +56,19 @@ class RssSource:
         )
 
     def _item(self, entry: FeedEntry, now: datetime) -> Item:
-        item_id = canonical_id(entry.link)
+        link = urljoin(str(self._config.url), entry.link)
+        item_id = canonical_id(link)
         return Item(
             id=item_id,
             kind=kind_for(item_id, "blog_post"),
             title=entry.title,
             summary=entry.summary,
-            url=entry.link,  # pyright: ignore[reportArgumentType] - pydantic validates to HttpUrl
+            url=link,  # pyright: ignore[reportArgumentType] - pydantic validates to HttpUrl
             authors=entry.authors,
             published_at=entry.published,
             first_seen=now,
             sightings=(
-                Sighting(source=self.name, source_type="rss", seen_at=now, origin_url=entry.link),
+                Sighting(source=self.name, source_type="rss", seen_at=now, origin_url=link),
             ),
             tags=entry.categories,
         )

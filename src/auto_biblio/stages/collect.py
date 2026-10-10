@@ -95,6 +95,12 @@ class CollectStage:
             return self._failed(source.name, exc)
         except SourceUnavailableError as exc:
             return self._failed(source.name, exc)
+        except Exception as exc:
+            # Last resort: a connector bug or an unforeseen payload must not abort the
+            # whole run and lose the other sources' results. Logged with its traceback
+            # and reported as a failed source, never swallowed.
+            logger.exception("source %s crashed", source.name)
+            return SourceReport(source=source.name, status="failed", error=repr(exc))
         report = self._store(source.name, batch)
         self._cursors.set(source.name, fetched_at)
         logger.info("%s: %d items (%d new), %d signals", *_summary(report))

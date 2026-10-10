@@ -145,3 +145,12 @@ def test_empty_batch_writes_nothing(tmp_path: Path) -> None:
     assert not (tmp_path / "signals").exists()
     assert report.sources[0].status == "ok"
     assert CursorStore.open(tmp_path).get("a") == NOW
+
+
+def test_unexpected_error_fails_only_that_source(tmp_path: Path) -> None:
+    crashing = FakeSource("crashing", error=ValueError("bad entry"))
+    fine = FakeSource("fine", SourceBatch(items=(make_item(),)))
+    report = run(tmp_path, crashing, fine)
+    statuses = {s.source: s.status for s in report.sources}
+    assert statuses == {"crashing": "failed", "fine": "ok"}
+    assert ItemStore.open(tmp_path).get(ItemId("arxiv:2410.12345")) is not None

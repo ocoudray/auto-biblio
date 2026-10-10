@@ -60,3 +60,21 @@ def test_rss_sighting() -> None:
 
 def batch_signals_empty() -> bool:
     return make_source("atom_sample.xml").fetch(NOW).signals == ()
+
+
+def test_relative_links_resolved_against_feed_url() -> None:
+    body = (
+        b"<rss version='2.0'><channel><title>t</title><item><title>Post</title>"
+        b"<link>/blog/post-1</link></item></channel></rss>"
+    )
+    client = httpx.Client(
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, content=body))
+    )
+    config = RssSourceConfig(
+        name="rel",
+        type="rss",
+        url="https://example.com/feed.xml",  # pyright: ignore[reportArgumentType]
+        family="applied",
+    )
+    (item,) = RssSource(config, client, lambda: NOW, Throttle(0)).fetch(NOW).items
+    assert str(item.url) == "https://example.com/blog/post-1"
