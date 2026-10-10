@@ -2,7 +2,7 @@
 # a new `type` needs a new connector in auto-biblio.
 sources:
   # Academic
-  - {name: arxiv, type: arxiv, categories: [cs.CL, cs.LG, cs.CV, cs.AI], max_results: 2000, min_interval_s: 3}
+  - {name: arxiv, type: arxiv, categories: [cs.CL, cs.LG, cs.CV, cs.AI], max_results: 6000, min_interval_s: 3, overlap_days: 5}
   - {name: hf-papers, type: hf_papers}
 
   # Applied: repositories and releases (watched repos come from profile.yaml)

@@ -1,7 +1,7 @@
 """Collect stage: poll every source, merge what they return, record cursors and a report."""
 
 import logging
-from collections.abc import Collection, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from datetime import datetime, timedelta
 
 from auto_biblio.domain.errors import SourcePayloadError, SourceUnavailableError
@@ -29,6 +29,7 @@ class CollectStage:
         *,
         clock: Clock,
         overlap: timedelta = timedelta(days=2),
+        overlaps: Mapping[str, timedelta] | None = None,
         lookback: timedelta = timedelta(days=7),
     ) -> None:
         """Build the stage.
@@ -41,6 +42,7 @@ class CollectStage:
             runs: Run journal.
             clock: Current time provider.
             overlap: How far before the cursor to look again (absorbs late publications).
+            overlaps: Per-source overrides of `overlap`, by source name.
             lookback: How far back a source's first run looks.
         """
         self._sources = sources
@@ -50,6 +52,7 @@ class CollectStage:
         self._runs = runs
         self._clock = clock
         self._overlap = overlap
+        self._overlaps = dict(overlaps or {})
         self._lookback = lookback
 
     def run(
@@ -108,7 +111,9 @@ class CollectStage:
 
     def _lower_bound(self, name: str, now: datetime) -> datetime:
         cursor = self._cursors.get(name)
-        return now - self._lookback if cursor is None else cursor - self._overlap
+        if cursor is None:
+            return now - self._lookback
+        return cursor - self._overlaps.get(name, self._overlap)
 
     def _store(self, name: str, batch: SourceBatch) -> SourceReport:
         outcomes = [self._items.upsert(item) for item in batch.items]

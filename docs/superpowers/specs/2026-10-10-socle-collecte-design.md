@@ -123,7 +123,7 @@ requêtes).
 
 ```yaml
 sources:
-  - { name: arxiv, type: arxiv, categories: [cs.CL, cs.LG, cs.CV, cs.AI], max_results: 2000, min_interval_s: 3 }
+  - { name: arxiv, type: arxiv, categories: [cs.CL, cs.LG, cs.CV, cs.AI], max_results: 6000, min_interval_s: 3, overlap_days: 5 }
   - { name: hf-papers, type: hf_papers }
   - { name: github-rising, type: github_search, topics: [llm, agents, rag, ocr, document-ai, tabular], min_stars: 50, created_within_days: 30 }
   - { name: github-releases, type: github_releases }     # repos : union des profile.themes[*].watch.repos
@@ -197,7 +197,8 @@ puis un renommage, pour rester atomiques.
 
 `CollectStage(sources, item_store, signal_store, cursor_store, clock)` :
 
-1. Pour chaque source activée : `since = curseur − chevauchement (2 jours)`, ou
+1. Pour chaque source activée : `since = curseur − chevauchement` (`overlap_days` de la source :
+   2 jours par défaut, 5 pour arXiv, qui annonce le lundi les soumissions du jeudi-vendredi), ou
    `maintenant − lookback (7 jours)` à la première exécution.
 2. `fetch(since)`. En cas d'erreur de source : statut `failed` dans le rapport, journalisation,
    quarantaine si c'est une `SourcePayloadError`, puis on passe à la source suivante.

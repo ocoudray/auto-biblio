@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from importlib.metadata import entry_points
 from pathlib import Path
 
@@ -120,3 +120,12 @@ def test_main_runs_real_app(
         main()
     assert excinfo.value.code == 0
     assert "Configuration valid: 7 themes" in capsys.readouterr().out
+
+
+def test_collect_uses_configured_overlap(data_dir: Path) -> None:
+    arxiv = FakeSource("arxiv")
+    app = create_app(factory_of(arxiv), clock=lambda: NOW)
+    runner.invoke(app, ["collect", "--data-dir", str(data_dir)])
+    later = create_app(factory_of(arxiv), clock=lambda: NOW + timedelta(days=1))
+    runner.invoke(later, ["collect", "--data-dir", str(data_dir)])
+    assert arxiv.since[1] == NOW - timedelta(days=5)

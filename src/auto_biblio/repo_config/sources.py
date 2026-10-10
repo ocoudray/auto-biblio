@@ -13,6 +13,7 @@ class _BaseSourceConfig(BaseModel):
     name: Slug
     enabled: bool = True
     min_interval_s: float = Field(default=1.0, ge=0)
+    overlap_days: int = Field(default=2, ge=0)
 
 
 class ArxivSourceConfig(_BaseSourceConfig):
@@ -20,8 +21,11 @@ class ArxivSourceConfig(_BaseSourceConfig):
 
     type: Literal["arxiv"]
     categories: tuple[str, ...] = Field(min_length=1)
-    max_results: int = Field(default=2000, gt=0)
+    max_results: int = Field(default=6000, gt=0)
     min_interval_s: float = Field(default=3.0, ge=0)
+    # arXiv announces Thursday-Friday submissions on Monday: a cursor-based window
+    # needs more than a weekend of overlap to catch them.
+    overlap_days: int = Field(default=5, ge=0)
 
 
 class HfPapersSourceConfig(_BaseSourceConfig):

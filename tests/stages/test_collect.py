@@ -154,3 +154,23 @@ def test_unexpected_error_fails_only_that_source(tmp_path: Path) -> None:
     statuses = {s.source: s.status for s in report.sources}
     assert statuses == {"crashing": "failed", "fine": "ok"}
     assert ItemStore.open(tmp_path).get(ItemId("arxiv:2410.12345")) is not None
+
+
+def test_per_source_overlap(tmp_path: Path) -> None:
+    cursors = CursorStore.open(tmp_path)
+    cursors.set("arxiv", NOW)
+    cursors.set("hn", NOW)
+    cursors.flush()
+    arxiv, hn = FakeSource("arxiv"), FakeSource("hn")
+    stage = CollectStage(
+        [arxiv, hn],
+        ItemStore.open(tmp_path),
+        SignalStore.open(tmp_path),
+        CursorStore.open(tmp_path),
+        RunStore(tmp_path),
+        clock=lambda: NOW,
+        overlaps={"arxiv": timedelta(days=5)},
+    )
+    stage.run()
+    assert arxiv.since == [NOW - timedelta(days=5)]
+    assert hn.since == [NOW - timedelta(days=2)]

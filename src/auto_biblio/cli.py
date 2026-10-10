@@ -1,7 +1,7 @@
 """Command-line interface: thin commands that parse input, call the stages and report."""
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Annotated
 
@@ -127,6 +127,7 @@ def create_app(
                 CursorStore.open(state),
                 RunStore(state),
                 clock=clock,
+                overlaps={s.name: timedelta(days=s.overlap_days) for s in config.sources.sources},
             )
             report = stage.run(only=set(source) if source else None, since=lower_bound)
         for entry in report.sources:
