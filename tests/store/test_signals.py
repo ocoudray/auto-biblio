@@ -35,3 +35,18 @@ def test_signals_partitioned_by_observed_month_and_sorted(tmp_path: Path) -> Non
 def test_flush_without_changes_writes_nothing(tmp_path: Path) -> None:
     SignalStore.open(tmp_path).flush()
     assert not (tmp_path / "signals").exists()
+
+
+def test_signal_history_sorted(tmp_path: Path) -> None:
+    store = SignalStore.open(tmp_path)
+    store.add(
+        [
+            make_signal(value=3, observed_at=NOW),
+            make_signal(value=1, observed_at=NOW - timedelta(days=2)),
+        ]
+    )
+    store.add([make_signal(item_id="gh:other/x")])
+    store.flush()
+    reopened = SignalStore.open(tmp_path)
+    assert [s.value for s in reopened.history(make_signal().item_id)] == [1, 3]
+    assert reopened.history(make_signal(item_id="gh:none/x").item_id) == ()

@@ -2,3 +2,6 @@
 __pycache__/
 # Temporary files left by an interrupted atomic write
 *.tmp
+# Embedding cache: derived data, restored by the weekly workflow's actions/cache
+.cache/
+digest.html

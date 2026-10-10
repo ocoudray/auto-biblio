@@ -1,0 +1,33 @@
+{%- macro line(item) -%}
+<tr><td style="padding:10px 0;border-bottom:1px solid #e5e5e5;">
+  <a href="{{ item.url }}" style="font-size:15px;font-weight:600;color:#1a56db;text-decoration:none;">{{ item.title }}</a>
+  {%- if item.revenant %} <span style="font-size:11px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:8px;">revient au goût du jour</span>{% endif %}
+  {%- if item.unverified %} <span style="font-size:11px;background:#f3f4f6;color:#4b5563;padding:1px 6px;border-radius:8px;">non vérifié</span>{% endif %}
+  <div style="font-size:12px;color:#6b7280;margin-top:2px;">{{ item.sources }}{% if item.item_type %} · {{ item.item_type }}{% endif %}</div>
+  {%- if item.reason %}<div style="font-size:14px;color:#111827;margin-top:4px;">{{ item.reason }}</div>{% endif %}
+  {%- if item.up_url %}<div style="font-size:13px;margin-top:4px;"><a href="{{ item.up_url }}" style="text-decoration:none;">👍</a> &nbsp; <a href="{{ item.down_url }}" style="text-decoration:none;">👎</a></div>{% endif %}
+</td></tr>
+{%- endmacro -%}
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Veille IA {{ view.week }}</title></head>
+<body style="margin:0;padding:16px;background:#ffffff;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;">
+<table role="presentation" style="max-width:640px;margin:0 auto;width:100%;border-collapse:collapse;">
+<tr><td><h1 style="font-size:20px;margin:0 0 4px;">Veille IA — {{ view.week }}</h1>
+<p style="font-size:13px;color:#6b7280;margin:0 0 16px;">{{ view.count }} contenus retenus.</p></td></tr>
+{%- for section in view.sections %}
+<tr><td><h2 style="font-size:16px;margin:20px 0 4px;">{{ section.label }}</h2></td></tr>
+{%- for item in section.items %}{{ line(item) }}{% endfor %}
+{%- endfor %}
+{%- if view.discoveries %}
+<tr><td><h2 style="font-size:16px;margin:20px 0 4px;">Découvertes <span style="font-size:12px;font-weight:400;color:#6b7280;">hors de tes thèmes</span></h2></td></tr>
+{%- for item in view.discoveries %}{{ line(item) }}{% endfor %}
+{%- endif %}
+<tr><td style="padding-top:24px;font-size:12px;color:#6b7280;">
+  <strong>Santé du pipeline</strong><br>
+  Scoring : {{ view.scoring_version }}{% if view.auc is not none %} (AUC {{ "%.2f"|format(view.auc) }}){% endif %}
+  · LLM : {{ view.tokens }} tokens, {{ "%.3f"|format(view.cost_usd) }} $
+  {%- if view.unverified %} · {{ view.unverified }} non vérifié(s){% endif %}
+  {%- for source in view.health.failing_sources %}<br>⚠ {{ source.source }} en échec depuis {{ source.consecutive_failures }} exécution(s){% endfor %}
+  {%- for degradation in view.degradations %}<br>⚠ {{ degradation }}{% endfor %}
+</td></tr>
+</table></body></html>

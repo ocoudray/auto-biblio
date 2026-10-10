@@ -1,16 +1,21 @@
 [project]
 name = "auto-biblio"
-version = "0.1.1"
+version = "0.2.0"
 description = "Routine to fetch automatically new research and development on AI, and give a recap of the most relevant advances"
 readme = "README.md"
 authors = [{ name = "Olivier COUDRAY", email = "olivier.coudray.15@polytechnique.org" }]
 requires-python = ">=3.12"
 dependencies = [
+    "fastembed>=0.9.0",
     "feedparser>=6.0.14",
     "httpx>=0.28.1",
+    "jinja2>=3.1.6",
+    "numpy>=2.5.3",
     "pydantic>=2.14",
+    "pydantic-ai-slim[anthropic,google]>=2.55.0",
     "pydantic-settings>=2.15",
     "pyyaml>=6.0.3",
+    "scikit-learn>=1.9.1",
     "typer>=0.27.3",
 ]
 
@@ -57,6 +62,7 @@ convention = "google"
 "tests/**" = ["S101", "D", "PLR2004", "INP001"]
 "scripts/**" = ["INP001"]
 "examples/**" = ["INP001", "T201"]  # standalone scripts that print their result
+"typings/**" = ["N803"]  # third-party stubs keep the library's argument names (X, C)
 
 [tool.pyright]
 include = ["src", "tests", "examples"]

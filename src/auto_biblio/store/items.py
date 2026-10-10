@@ -1,5 +1,6 @@
 """Item store: one JSONL file per month of `first_seen`, sorted by id."""
 
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Literal, Self
 
@@ -49,6 +50,15 @@ class ItemStore:
     def get(self, item_id: ItemId) -> Item | None:
         """Return the item with this id, if known."""
         return self._items.get(item_id)
+
+    def all(self) -> Iterator[Item]:
+        """Iterate over every item, sorted by id.
+
+        Yields:
+            The items.
+        """
+        for item_id in sorted(self._items):
+            yield self._items[item_id]
 
     def upsert(self, item: Item) -> UpsertOutcome:
         """Insert an item, or merge it into the same item already known.

@@ -1,9 +1,12 @@
 """Builders for domain objects used across test modules."""
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
 
+from auto_biblio.domain.features import FeatureVector, ThemeId
 from auto_biblio.domain.ids import ItemId, ItemKind
 from auto_biblio.domain.models import Item, Sighting, Signal, SignalKind, SourceType
+from auto_biblio.domain.triage import ScoredItem, ScoringReport, TriageRun, TriageVerdict
 
 NOW = datetime(2026, 10, 10, 5, 0, tzinfo=UTC)
 
@@ -54,3 +57,49 @@ def make_signal(
     return Signal(
         item_id=ItemId(item_id), kind=kind, value=value, observed_at=observed_at, source="s"
     )
+
+
+def make_features(item_id: str = "arxiv:2410.12345", **overrides: object) -> FeatureVector:
+    """Build a feature vector (paper, abstract, mid-range scores)."""
+    base: dict[str, object] = {
+        "item_id": item_id,
+        "family": "paper",
+        "context_level": "abstract",
+        "theme_similarity": {},
+        "theme_percentile": {"agentic": 0.9},
+        "relevance": 0.9,
+        "popularity": 0.5,
+        "source_count": 1,
+        "watched": False,
+        "revenant": False,
+        "age_days": 1.0,
+    }
+    return FeatureVector.model_validate(base | overrides)
+
+
+def make_run(week: str, items: tuple[ScoredItem, ...], generated_at: datetime = NOW) -> TriageRun:
+    """Build a triage journal."""
+    return TriageRun(
+        week=week,
+        run_id=f"{week}-triage",
+        generated_at=generated_at,
+        scoring=ScoringReport(version="fixed-v1"),
+        items=items,
+    )
+
+
+def make_verdict(
+    ref: str = "i01",
+    scores: Mapping[ThemeId, int] | Mapping[str, int] | None = None,
+    **overrides: object,
+) -> TriageVerdict:
+    """Build a triage verdict from a {theme: score} mapping."""
+    base: dict[str, object] = {
+        "ref": ref,
+        "relevance": scores if scores is not None else {"agentic": 4},
+        "item_type": "tool",
+        "novelty": "high",
+        "confidence": "medium",
+        "reason": "Short reason.",
+    }
+    return TriageVerdict.model_validate(base | overrides)

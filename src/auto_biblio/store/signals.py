@@ -1,5 +1,6 @@
 """Signal store: append-only observations, at most one per item, kind and day."""
 
+from collections import defaultdict
 from collections.abc import Iterable
 from datetime import date
 from pathlib import Path
@@ -25,6 +26,10 @@ class SignalStore:
         self._dir = directory
         self._by_month = by_month
         self._keys: set[_Key] = {_key(s) for signals in by_month.values() for s in signals}
+        self._by_item: defaultdict[ItemId, list[Signal]] = defaultdict(list)
+        for signals in by_month.values():
+            for signal in signals:
+                self._by_item[signal.item_id].append(signal)
         self._dirty: set[str] = set()
 
     @classmethod
@@ -59,11 +64,23 @@ class SignalStore:
             if key in self._keys:
                 continue
             self._keys.add(key)
+            self._by_item[signal.item_id].append(signal)
             month = month_key(signal.observed_at.year, signal.observed_at.month)
             self._by_month.setdefault(month, []).append(signal)
             self._dirty.add(month)
             added += 1
         return added
+
+    def history(self, item_id: ItemId) -> tuple[Signal, ...]:
+        """Return every observation of an item, oldest first.
+
+        Args:
+            item_id: The item.
+
+        Returns:
+            Its signals, all kinds mixed, sorted by observation time then kind.
+        """
+        return tuple(sorted(self._by_item.get(item_id, ()), key=lambda s: (s.observed_at, s.kind)))
 
     def flush(self) -> None:
         """Rewrite the partitions changed since the last flush."""

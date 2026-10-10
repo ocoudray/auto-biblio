@@ -1,0 +1,76 @@
+from pathlib import Path
+
+from auto_biblio.publish.render import render_digest
+from auto_biblio.publish.view import (
+    DigestItem,
+    DigestView,
+    HealthSummary,
+    SourceHealth,
+    ThemeSection,
+)
+
+SNAPSHOT = Path(__file__).parent.parent / "fixtures" / "digest" / "expected.html"
+
+
+def item(title: str, **extra: object) -> DigestItem:
+    base: dict[str, object] = {
+        "title": title,
+        "url": "https://arxiv.org/abs/2410.12345",
+        "sources": "arxiv, hn",
+        "reason": "Introduces a durable harness.",
+        "item_type": "advance",
+        "revenant": False,
+        "unverified": False,
+        "up_url": "https://github.com/me/data/issues/new?title=up",
+        "down_url": "https://github.com/me/data/issues/new?title=down",
+    }
+    return DigestItem.model_validate(base | extra)
+
+
+def view() -> DigestView:
+    return DigestView(
+        week="2026-W41",
+        sections=(
+            ThemeSection(
+                label="Agents", items=(item("Agent <script>x</script>"), item("Old", revenant=True))
+            ),
+        ),
+        discoveries=(item("Popular thing", unverified=True, reason=None, item_type=None),),
+        health=HealthSummary(
+            failing_sources=(SourceHealth(source="import-ai", consecutive_failures=3),)
+        ),
+        scoring_version="fixed-v1",
+        auc=None,
+        unverified=1,
+        cost_usd=0.0123,
+        tokens=4200,
+        degradations=("fallback triage: m (ProviderQuotaError)",),
+    )
+
+
+def test_html_escapes_titles() -> None:
+    html, text = render_digest(view())
+    assert "<script>" not in html
+    assert "&lt;script&gt;" in html
+    assert "Agent <script>x</script>" in text  # plain text is not HTML
+
+
+def test_render_contents() -> None:
+    html, text = render_digest(view())
+    for fragment in (
+        "Veille IA — 2026-W41",
+        "revient au goût du jour",
+        "non vérifié",
+        "Découvertes",
+        "import-ai en échec depuis 3",
+        "4200 tokens",
+        "0.012 $",
+    ):
+        assert fragment in html
+    assert "## Agents" in text
+    assert "! fallback triage" in text
+
+
+def test_render_snapshot() -> None:
+    html, _ = render_digest(view())
+    assert html == SNAPSHOT.read_text(encoding="utf-8")

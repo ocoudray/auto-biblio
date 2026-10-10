@@ -1,0 +1,25 @@
+# LLM catalogue, chains of models per role and weekly budget.
+# Model ids are pydantic-ai ids: "<provider>:<model>". Supported providers: google, anthropic.
+# Prices are per million tokens; 0 means a free quota. Checked on 2026-10-10:
+#   - gemini-3.5-flash-lite: free tier of Google AI Studio (paid tier ~0.30 / 2.50 USD).
+#   - claude-haiku-5-5: 0.10 / 0.50 USD (prompts up to 100K tokens).
+models:
+  flash-lite:
+    id: google:gemini-3.5-flash-lite
+    input_usd_per_mtok: 0
+    output_usd_per_mtok: 0
+    batch_size: 20
+  haiku:
+    id: anthropic:claude-haiku-5-5
+    input_usd_per_mtok: 0.10
+    output_usd_per_mtok: 0.50
+    batch_size: 15
+
+# Models tried in order; a model whose API key is missing is skipped.
+chains:
+  triage: [flash-lite, haiku]
+
+# Weekly caps: tokens count for every model, dollars for paid ones only.
+weekly_budget:
+  usd: 0.50
+  tokens: 300000

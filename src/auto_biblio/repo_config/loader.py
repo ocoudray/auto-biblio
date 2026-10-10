@@ -6,11 +6,15 @@ import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from auto_biblio.domain.errors import ConfigError
+from auto_biblio.repo_config.llm import LLMConfig
 from auto_biblio.repo_config.profile import Profile
 from auto_biblio.repo_config.sources import SourcesConfig
+from auto_biblio.repo_config.triage import TriageConfig
 
 PROFILE_PATH = Path("config/profile.yaml")
 SOURCES_PATH = Path("config/sources.yaml")
+LLM_PATH = Path("config/llm.yaml")
+TRIAGE_PATH = Path("config/triage.yaml")
 
 
 class RepoConfig(BaseModel):
@@ -20,10 +24,28 @@ class RepoConfig(BaseModel):
 
     profile: Profile
     sources: SourcesConfig
+    triage: TriageConfig = TriageConfig()
+    llm: LLMConfig | None = None
+    """Absent until the repository is set up for triage; collection does not need it."""
+
+    def require_llm(self) -> LLMConfig:
+        """Return the LLM configuration of a repository set up for triage.
+
+        Returns:
+            The LLM configuration.
+
+        Raises:
+            ConfigError: If `config/llm.yaml` does not exist.
+        """
+        if self.llm is None:
+            raise ConfigError(LLM_PATH.as_posix(), None, "file required for triage is missing")
+        return self.llm
 
 
 def load_repo_config(data_dir: Path) -> RepoConfig:
     """Load and validate every configuration file of a data repository.
+
+    `triage.yaml` is optional (defaults apply) and so is `llm.yaml` (only triage needs it).
 
     Args:
         data_dir: Root of the data repository.
@@ -34,9 +56,13 @@ def load_repo_config(data_dir: Path) -> RepoConfig:
     Raises:
         ConfigError: If a file is missing, is not valid YAML or does not match its schema.
     """
+    triage_present = (data_dir / TRIAGE_PATH).exists()
+    llm_present = (data_dir / LLM_PATH).exists()
     return RepoConfig(
         profile=_load(data_dir, PROFILE_PATH, Profile),
         sources=_load(data_dir, SOURCES_PATH, SourcesConfig),
+        triage=_load(data_dir, TRIAGE_PATH, TriageConfig) if triage_present else TriageConfig(),
+        llm=_load(data_dir, LLM_PATH, LLMConfig) if llm_present else None,
     )
 
 
@@ -48,6 +74,8 @@ def _load[ModelT: BaseModel](data_dir: Path, relative: Path, model: type[ModelT]
         raise ConfigError(shown, None, f"cannot read file ({exc.strerror})") from exc
     except yaml.YAMLError as exc:
         raise ConfigError(shown, None, f"invalid YAML ({exc})") from exc
+    if raw is None and model is TriageConfig:
+        raw = {}  # an empty triage.yaml means "all defaults"
     try:
         return model.model_validate(raw)
     except ValidationError as exc:

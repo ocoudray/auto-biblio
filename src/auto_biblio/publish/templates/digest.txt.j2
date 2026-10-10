@@ -1,0 +1,25 @@
+{%- macro line(item) %}
+- {{ item.title }}{% if item.revenant %} [revient au goût du jour]{% endif %}{% if item.unverified %} [non vérifié]{% endif %}
+  {{ item.url }}
+  {{ item.sources }}{% if item.item_type %} · {{ item.item_type }}{% endif %}
+{%- if item.reason %}
+  {{ item.reason }}
+{%- endif %}
+{%- endmacro -%}
+Veille IA — {{ view.week }} ({{ view.count }} contenus)
+{% for section in view.sections %}
+## {{ section.label }}
+{% for item in section.items %}{{ line(item) }}
+{% endfor %}{% endfor %}
+{%- if view.discoveries %}
+## Découvertes (hors de tes thèmes)
+{% for item in view.discoveries %}{{ line(item) }}
+{% endfor %}{% endif %}
+--
+Scoring : {{ view.scoring_version }}{% if view.auc is not none %} (AUC {{ "%.2f"|format(view.auc) }}){% endif %} · LLM : {{ view.tokens }} tokens, {{ "%.3f"|format(view.cost_usd) }} $
+{%- for source in view.health.failing_sources %}
+! {{ source.source }} en échec depuis {{ source.consecutive_failures }} exécution(s)
+{%- endfor %}
+{%- for degradation in view.degradations %}
+! {{ degradation }}
+{%- endfor %}
