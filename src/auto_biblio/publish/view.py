@@ -2,12 +2,14 @@
 
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
+from pathlib import PurePosixPath
 
 from pydantic import BaseModel, ConfigDict
 
 from auto_biblio.domain.features import ThemeId
 from auto_biblio.domain.feedback import feedback_issue_url
 from auto_biblio.domain.ids import ItemId
+from auto_biblio.domain.kb.changelog import ChangelogEntry
 from auto_biblio.domain.models import Item
 from auto_biblio.domain.run_report import RunReport
 from auto_biblio.domain.triage import ScoredItem, TriageRun
@@ -30,6 +32,9 @@ class DigestItem(_Frozen):
     unverified: bool
     up_url: str | None
     down_url: str | None
+    note_url: str | None = None
+    verdict: str | None = None
+    """One-sentence verdict of the deep analysis, when there is one."""
 
 
 class ThemeSection(_Frozen):
@@ -78,6 +83,91 @@ class HealthSummary(_Frozen):
         return cls(failing_sources=tuple(failing))
 
 
+class NoteLink(_Frozen):
+    """Where the note of an item is, and its verdict when it is a deep one."""
+
+    url: str
+    verdict: str | None = None
+
+
+class KBChange(_Frozen):
+    """One line of the knowledge base changes."""
+
+    title: str
+    change: str
+    url: str | None
+
+
+class KBChanges(_Frozen):
+    """What the knowledge base gained this week."""
+
+    notes: tuple[KBChange, ...] = ()
+    theme: str | None = None
+    theme_url: str | None = None
+    links_removed: tuple[str, ...] = ()
+    """`<url> : <reason>` lines."""
+
+    @property
+    def is_empty(self) -> bool:
+        """Whether there is nothing to show."""
+        return not (self.notes or self.theme or self.links_removed)
+
+
+_CHANGE_LABEL = {
+    "created": "nouvelle fiche",
+    "deepened": "fiche approfondie",
+    "refreshed": "fiche réécrite",
+}
+
+
+def kb_url(repo: str | None, path: PurePosixPath) -> str | None:
+    """Link to a file of the knowledge base on GitHub.
+
+    Args:
+        repo: `owner/repo` of the data repository.
+        path: The file, relative to `kb/`.
+
+    Returns:
+        The URL, or None without repository.
+    """
+    return f"https://github.com/{repo}/blob/main/kb/{path}" if repo else None
+
+
+def kb_changes(
+    entry: ChangelogEntry,
+    note_paths: Mapping[ItemId, PurePosixPath],
+    profile: Profile,
+    repo: str | None,
+) -> KBChanges:
+    """Turn the week's changelog into the digest section.
+
+    Args:
+        entry: The changelog of the week.
+        note_paths: Location of each note.
+        profile: The interest profile (theme labels).
+        repo: `owner/repo` of the data repository.
+
+    Returns:
+        The section.
+    """
+    labels = {t.id: t.label for t in profile.themes}
+    notes = tuple(
+        KBChange(
+            title=change.title,
+            change=_CHANGE_LABEL[change.change],
+            url=kb_url(repo, path) if (path := note_paths.get(change.note_id)) else None,
+        )
+        for change in entry.notes
+    )
+    theme_path = PurePosixPath("themes", f"{entry.theme}.md")
+    return KBChanges(
+        notes=notes,
+        theme=labels.get(entry.theme, entry.theme) if entry.theme else None,
+        theme_url=kb_url(repo, theme_path) if entry.theme else None,
+        links_removed=tuple(f"{r.url} : {r.reason}" for r in entry.links_removed),
+    )
+
+
 class DigestView(_Frozen):
     """Everything the digest templates render."""
 
@@ -91,6 +181,7 @@ class DigestView(_Frozen):
     cost_usd: float
     tokens: int
     degradations: tuple[str, ...]
+    kb_changes: KBChanges = KBChanges()
 
     @property
     def count(self) -> int:
@@ -98,12 +189,15 @@ class DigestView(_Frozen):
         return sum(len(s.items) for s in self.sections) + len(self.discoveries)
 
 
-def build_view(
+def build_view(  # noqa: PLR0913 - the digest combines every weekly output
     run: TriageRun,
     items: Mapping[ItemId, Item],
     profile: Profile,
     health: HealthSummary,
     repo: str | None,
+    *,
+    notes: Mapping[ItemId, NoteLink] | None = None,
+    changes: KBChanges | None = None,
 ) -> DigestView:
     """Assemble the digest of a triage run.
 
@@ -113,14 +207,17 @@ def build_view(
         profile: The interest profile (theme labels and order).
         health: Pipeline health.
         repo: `owner/repo` of the data repository, for the feedback links (none without).
+        notes: The note of each item that has one.
+        changes: The knowledge base changes of the week.
 
     Returns:
         The view.
     """
+    links = notes or {}
     by_theme: defaultdict[ThemeId | None, list[DigestItem]] = defaultdict(list)
     discoveries: list[DigestItem] = []
     for scored in run.selected():
-        line = _line(scored, items[scored.item_id], run.week, repo)
+        line = _line(scored, items[scored.item_id], run.week, repo, links.get(scored.item_id))
         if scored.slot == "discovery":
             discoveries.append(line)
         else:
@@ -146,10 +243,13 @@ def build_view(
         cost_usd=usd,
         tokens=tokens,
         degradations=run.degradations,
+        kb_changes=changes or KBChanges(),
     )
 
 
-def _line(scored: ScoredItem, item: Item, week: str, repo: str | None) -> DigestItem:
+def _line(
+    scored: ScoredItem, item: Item, week: str, repo: str | None, note: NoteLink | None
+) -> DigestItem:
     verdict = scored.verdict
     sources = ", ".join(sorted({s.source for s in item.sightings}))
     return DigestItem(
@@ -162,4 +262,6 @@ def _line(scored: ScoredItem, item: Item, week: str, repo: str | None) -> Digest
         unverified=verdict is None,
         up_url=feedback_issue_url(repo, item.id, 1, week) if repo else None,
         down_url=feedback_issue_url(repo, item.id, -1, week) if repo else None,
+        note_url=note.url if note else None,
+        verdict=note.verdict if note else None,
     )

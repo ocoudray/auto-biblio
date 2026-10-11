@@ -5,12 +5,16 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+import httpx
 from pydantic_ai.models import Model
 
 from auto_biblio.config import Settings
 from auto_biblio.domain.budget import BudgetLedger
 from auto_biblio.domain.errors import ConfigError
 from auto_biblio.embeddings import Embedder
+from auto_biblio.extract import TextExtractor
+from auto_biblio.extract.composite import CompositeExtractor
+from auto_biblio.extract.fetchers import ArticleFetcher, ArxivFetcher, RepoFetcher
 from auto_biblio.llm import ModelRunner, StructuredLLM
 from auto_biblio.llm.budgeted import BudgetedRunner
 from auto_biblio.llm.cached import CachedLLM
@@ -20,10 +24,14 @@ from auto_biblio.publish import MailSender
 from auto_biblio.publish.smtp import SmtpMailSender
 from auto_biblio.repo_config.llm import LLMConfig, ModelSpec
 from auto_biblio.repo_config.loader import LLM_PATH
+from auto_biblio.sources._http import Throttle
 from auto_biblio.stages.triage import LLMFactory
 from auto_biblio.store.llm_cache import LLMCacheStore
 
 logger = logging.getLogger(__name__)
+
+ARXIV_INTERVAL_S = 3.0
+"""arXiv asks automated clients for 3 seconds between requests."""
 
 
 def _api_key(provider: str, settings: Settings) -> str | None:
@@ -126,6 +134,7 @@ class Services:
     embedder: Callable[[Settings], Embedder]
     model_runner: Callable[[Settings], ModelRunner]
     mail_sender: Callable[[Settings], MailSender | None]
+    extractor: Callable[[Settings, httpx.Client, Path], TextExtractor]
 
 
 def _real_embedder(_settings: Settings) -> Embedder:  # pragma: no cover - loads the model
@@ -154,6 +163,28 @@ def real_mail_sender(settings: Settings) -> MailSender | None:
     )
 
 
+def real_extractor(settings: Settings, client: httpx.Client, cache_dir: Path) -> TextExtractor:
+    """Build the full-text extractor.
+
+    Args:
+        settings: Where the GitHub token comes from.
+        client: HTTP client of the command.
+        cache_dir: Where full texts are cached.
+
+    Returns:
+        The extractor (arXiv, GitHub repositories, web articles).
+    """
+    return CompositeExtractor(
+        ArxivFetcher(client, Throttle(ARXIV_INTERVAL_S)),
+        RepoFetcher(client, settings.github_token),
+        ArticleFetcher(client),
+        cache_dir,
+    )
+
+
 REAL_SERVICES = Services(
-    embedder=_real_embedder, model_runner=_real_runner, mail_sender=real_mail_sender
+    embedder=_real_embedder,
+    model_runner=_real_runner,
+    mail_sender=real_mail_sender,
+    extractor=real_extractor,
 )

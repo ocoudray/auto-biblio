@@ -89,3 +89,12 @@ def test_empty_triage_file_means_defaults(tmp_path: Path) -> None:
     root = write_repo(tmp_path)
     (root / "config" / "triage.yaml").write_text("# nothing\n")
     assert load_repo_config(root).triage.candidates == 50
+
+
+def test_loader_reads_analysis(tmp_path: Path) -> None:
+    root = write_repo(tmp_path)
+    assert load_repo_config(root).analysis.deep_count == 4
+    (root / "config" / "analysis.yaml").write_text("deep_count: 2\n")
+    assert load_repo_config(root).analysis.deep_count == 2
+    (root / "config" / "analysis.yaml").write_text("")
+    assert load_repo_config(root).analysis.deep_count == 4

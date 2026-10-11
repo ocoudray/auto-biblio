@@ -156,3 +156,31 @@ class TriageRunMissingError(AutoBiblioError):
         self.week = week
         what = f"week {week}" if week else "any week"
         super().__init__(f"no triage journal for {what}: run `auto-biblio triage` first")
+
+
+class KBFormatError(AutoBiblioError):
+    """A knowledge base file cannot be read back."""
+
+    def __init__(self, origin: str, message: str) -> None:
+        """Build the error.
+
+        Args:
+            origin: The file, relative to the knowledge base.
+            message: What is wrong.
+        """
+        self.origin = origin
+        super().__init__(f"{origin}: {message}")
+
+
+class ExtractionError(AutoBiblioError):
+    """No full text could be extracted for an item."""
+
+    def __init__(self, url: str, message: str) -> None:
+        """Build the error.
+
+        Args:
+            url: What was fetched.
+            message: What went wrong.
+        """
+        self.url = url
+        super().__init__(f"{url}: {message}")

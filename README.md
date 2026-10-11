@@ -8,8 +8,9 @@ An automated watch on AI research and engineering. It collects new papers, repos
 releases, blog posts and discussions (arXiv, Hugging Face Daily Papers, GitHub, Hacker News,
 RSS), deduplicates them across sources and stores them in a separate data repository. Every
 week it triages them against your interest profile, with local embeddings and a cheap LLM
-within a budget, and mails a short digest whose 👍/👎 links train the ranking. Analysis and
-the knowledge base come in the next sub-projects (see the
+within a budget, writes notes and theme pages into a knowledge base, and mails a short digest
+whose 👍/👎 links train the ranking. The site and the local assistant come in the next
+sub-projects (see the
 [vision](docs/superpowers/specs/2026-10-10-auto-biblio-vision-design.md)).
 
 ## Set up
@@ -21,7 +22,7 @@ Two repositories work together:
   state and the GitHub Actions workflow that runs the collection every day.
 
 ```bash
-uv tool install git+https://github.com/ocoudray/auto-biblio@v0.2.0
+uv tool install git+https://github.com/ocoudray/auto-biblio@v0.4.0
 auto-biblio init ~/auto-biblio-data          # writes config/, state/, .github/workflows/
 cd ~/auto-biblio-data && auto-biblio validate-config
 git init -b main && git add -A && git commit -m "chore: init data repository"
@@ -107,7 +108,8 @@ auto-biblio-data/
 │   ├── profile.yaml        themes of interest, keywords, watched repositories
 │   ├── sources.yaml        sources to poll and their parameters
 │   ├── llm.yaml            models, fallback chain and weekly budget of the triage
-│   └── triage.yaml         every decision constant of the triage
+│   ├── triage.yaml         every decision constant of the triage
+│   └── analysis.yaml       notes and theme pages
 ├── state/
 │   ├── items/YYYY-MM.jsonl      deduplicated items, by month first seen, sorted by id
 │   ├── signals/YYYY-MM.jsonl    dated stars / upvotes / points / comments
@@ -117,7 +119,8 @@ auto-biblio-data/
 │   ├── triage/YYYY-Www.json     weekly journal: every candidate, its features, verdict and score
 │   ├── feedback/YYYY-MM.jsonl   👍/👎 reactions from the digest
 │   └── llm_cache/               cached LLM answers (re-running a week is free)
-└── .github/workflows/           daily.yml (collection) and weekly.yml (triage and digest)
+├── kb/                          knowledge base: notes/, themes/, changelog/ (Markdown)
+└── .github/workflows/           daily.yml (collection) and weekly.yml (triage, analysis, digest)
 ```
 
 Files are written atomically and deterministically (sorted, one JSON object per line), so a
@@ -128,7 +131,7 @@ readable.
 
 - Reddit and Substack feeds may answer `429`/`403` to cloud IPs such as GitHub runners; those
   sources fail in isolation and are reported.
-- Analysis of the selected items and the knowledge base are the next sub-projects (see the
+- The browsable site and the local assistant are the next sub-projects (see the
   [vision](docs/superpowers/specs/2026-10-10-auto-biblio-vision-design.md)).
 
 ## Develop

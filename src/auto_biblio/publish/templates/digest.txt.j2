@@ -5,6 +5,12 @@
 {%- if item.reason %}
   {{ item.reason }}
 {%- endif %}
+{%- if item.verdict %}
+  Analyse : {{ item.verdict }}
+{%- endif %}
+{%- if item.note_url %}
+  Fiche : {{ item.note_url }}
+{%- endif %}
 {%- endmacro -%}
 Veille IA — {{ view.week }} ({{ view.count }} contenus)
 {% for section in view.sections %}
@@ -15,6 +21,19 @@ Veille IA — {{ view.week }} ({{ view.count }} contenus)
 ## Découvertes (hors de tes thèmes)
 {% for item in view.discoveries %}{{ line(item) }}
 {% endfor %}{% endif %}
+{%- if not view.kb_changes.is_empty %}
+## Évolutions de la base
+{% for change in view.kb_changes.notes %}
+- {{ change.title }} : {{ change.change }}
+{%- endfor %}
+{%- if view.kb_changes.theme %}
+- Page thème {{ view.kb_changes.theme }} réécrite
+{%- endif %}
+{%- for removed in view.kb_changes.links_removed %}
+- Lien retiré : {{ removed }}
+{%- endfor %}
+
+{% endif -%}
 --
 Scoring : {{ view.scoring_version }}{% if view.auc is not none %} (AUC {{ "%.2f"|format(view.auc) }}){% endif %} · LLM : {{ view.tokens }} tokens, {{ "%.3f"|format(view.cost_usd) }} $
 {%- for source in view.health.failing_sources %}

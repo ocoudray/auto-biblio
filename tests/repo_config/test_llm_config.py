@@ -1,6 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
+from auto_biblio.domain.errors import ConfigError
 from auto_biblio.repo_config.llm import LLMConfig
 
 MODELS = {
@@ -71,8 +72,17 @@ def test_model_cost() -> None:
     assert cfg.models["flash"].is_free
 
 
-def test_missing_role_chain_rejected() -> None:
-    with pytest.raises(ValidationError, match="missing chain"):
-        LLMConfig.model_validate(
-            {"models": MODELS, "chains": {}, "weekly_budget": {"usd": 0, "tokens": 0}}
-        )
+def test_role_chain_missing_is_config_error() -> None:
+    # A v0.3 llm.yaml (triage only) still loads; only the steps needing other roles fail.
+    cfg = LLMConfig.model_validate(
+        {
+            "models": MODELS,
+            "chains": {"triage": ["flash"]},
+            "weekly_budget": {"usd": 0, "tokens": 0},
+        }
+    )
+    cfg.require("triage")
+    with pytest.raises(ConfigError, match="deep_analysis, synthesis"):
+        cfg.require("triage", "deep_analysis", "synthesis")
+    with pytest.raises(ConfigError, match="short_note"):
+        cfg.chain("short_note")

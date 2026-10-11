@@ -1,0 +1,8 @@
+# Weekly analysis: notes, theme pages and full-text limits. Delete a key to use its default.
+# See the "Knowledge base" page of the documentation.
+
+deep_count: 4                    # selected items analysed from their full text each week
+max_input_tokens: 30000          # size cap of the full text sent for a deep analysis
+synthesis_max_input_tokens: 40000  # size cap of the notes sent to write a theme page
+relevance_threshold: 3           # minimum LLM relevance (0-5) to attach a note to a theme
+chars_per_token: 4               # characters per token, to turn token caps into text sizes

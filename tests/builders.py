@@ -1,10 +1,11 @@
 """Builders for domain objects used across test modules."""
 
 from collections.abc import Mapping
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from auto_biblio.domain.features import FeatureVector, ThemeId
 from auto_biblio.domain.ids import ItemId, ItemKind
+from auto_biblio.domain.kb.notes import DeepAnalysis, Note, NoteMeta, ShortNote
 from auto_biblio.domain.models import Item, Sighting, Signal, SignalKind, SourceType
 from auto_biblio.domain.triage import ScoredItem, ScoringReport, TriageRun, TriageVerdict
 
@@ -103,3 +104,51 @@ def make_verdict(
         "reason": "Short reason.",
     }
     return TriageVerdict.model_validate(base | overrides)
+
+
+def make_note(  # noqa: PLR0913 - builder mirrors the note's main fields
+    note_id: str = "arxiv:2410.12345",
+    *,
+    depth: str = "short",
+    analyzed_at: date = date(2026, 10, 11),
+    links: tuple[str, ...] = (),
+    themes: tuple[str, ...] = ("agentic",),
+    my_notes: str = "",
+) -> Note:
+    """Build a note (short content, or a deep one when `depth="deep"`)."""
+    short = {"summary": f"About {note_id}.", "contribution": "New.", "relevance": "Useful."}
+    content: ShortNote | DeepAnalysis = (
+        DeepAnalysis.model_validate(
+            short
+            | {
+                "problem": "P.",
+                "method": ["Step"],
+                "results": [],
+                "limitations": [],
+                "positioning": "Pos.",
+                "takeaways": ["Do it"],
+                "further_reading": [],
+                "verdict": "Worth it.",
+                "confidence": "high",
+            }
+        )
+        if depth == "deep"
+        else ShortNote.model_validate(short)
+    )
+    meta = NoteMeta.model_validate(
+        {
+            "id": note_id,
+            "kind": "paper",
+            "title": f"Title {note_id}",
+            "url": "https://example.com/x",
+            "themes": list(themes),
+            "links": list(links),
+            "depth": depth,
+            "source_text": "full_text" if depth == "deep" else "abstract",
+            "first_seen": date(2026, 10, 1),
+            "analyzed_at": analyzed_at,
+            "model_id": "m",
+            "prompt_version": "deep_analysis_v1" if depth == "deep" else "short_note_v1",
+        }
+    )
+    return Note(meta=meta, content=content, my_notes=my_notes)

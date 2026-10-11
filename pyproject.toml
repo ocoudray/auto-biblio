@@ -1,6 +1,6 @@
 [project]
 name = "auto-biblio"
-version = "0.2.0"
+version = "0.4.0"
 description = "Routine to fetch automatically new research and development on AI, and give a recap of the most relevant advances"
 readme = "README.md"
 authors = [{ name = "Olivier COUDRAY", email = "olivier.coudray.15@polytechnique.org" }]
@@ -14,8 +14,10 @@ dependencies = [
     "pydantic>=2.14",
     "pydantic-ai-slim[anthropic,google]>=2.55.0",
     "pydantic-settings>=2.15",
+    "pypdf>=6.20.0",
     "pyyaml>=6.0.3",
     "scikit-learn>=1.9.1",
+    "trafilatura>=2.3.1",
     "typer>=0.27.3",
 ]
 

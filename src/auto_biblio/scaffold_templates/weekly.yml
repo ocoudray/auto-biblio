@@ -1,5 +1,5 @@
 # Template: `auto-biblio init` fills in the version; literal dollar signs are doubled here.
-name: Weekly triage and digest
+name: Weekly triage, analysis and digest
 
 on:
   schedule:
@@ -49,6 +49,10 @@ jobs:
         run: uv tool install git+https://github.com/ocoudray/auto-biblio@v$version
       - name: Triage
         run: auto-biblio triage $${WEEK:+--week "$$WEEK"}
+      - name: Analyze
+        # A failed analysis must not block the digest: it is sent without the new notes.
+        continue-on-error: true
+        run: auto-biblio analyze $${WEEK:+--week "$$WEEK"}
       - name: Digest
         run: |
           if [ "$${{ inputs.dry_run }}" = "true" ]; then
@@ -65,10 +69,10 @@ jobs:
       - name: Commit state
         if: $${{ !cancelled() }}
         run: |
-          if [ -n "$$(git status --porcelain state)" ]; then
+          if [ -n "$$(git status --porcelain state kb)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add state
+            git add state kb
             git commit -m "triage: $$(date -u +%G-W%V)"
             git push
           fi

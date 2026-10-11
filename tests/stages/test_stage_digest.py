@@ -1,14 +1,19 @@
 from pathlib import Path
 
 import pytest
-from builders import NOW, make_features, make_item, make_run, make_verdict
+from builders import NOW, make_features, make_item, make_note, make_run, make_verdict
 
+from auto_biblio.domain.analysis import AnalysisRun
 from auto_biblio.domain.errors import TriageRunMissingError
+from auto_biblio.domain.ids import ItemId
+from auto_biblio.domain.kb.changelog import ChangelogEntry, NoteChange
 from auto_biblio.domain.triage import ScoredItem
 from auto_biblio.publish import Mail
 from auto_biblio.repo_config.profile import Profile
 from auto_biblio.stages.digest import DigestStage
+from auto_biblio.store.analysis import AnalysisStore
 from auto_biblio.store.items import ItemStore
+from auto_biblio.store.kb import KBStore
 from auto_biblio.store.runs import RunStore
 from auto_biblio.store.triage import TriageStore
 
@@ -28,6 +33,7 @@ class Outbox:
 def stage(tmp_path: Path, outbox: Outbox | None, to: str | None = "me@example.com") -> DigestStage:
     items = ItemStore.open(tmp_path)
     items.upsert(make_item(title="Agent harness"))
+    items.flush()
     scored = ScoredItem(
         item_id=make_item().id,
         features=make_features(),
@@ -88,3 +94,60 @@ def test_sending_needs_sender_and_recipient(tmp_path: Path) -> None:
         stage(tmp_path, None).run()
     with pytest.raises(ValueError, match="needs a mail sender"):
         stage(tmp_path, Outbox(), to=None).run()
+
+
+def with_kb(tmp_path: Path, *, analysis: bool) -> DigestStage:
+    stage(tmp_path, Outbox())  # seeds the items and the triage journal
+    kb = KBStore.open(tmp_path / "kb")
+    kb.write_note(make_note("arxiv:2410.12345", depth="deep"))
+    analyses = AnalysisStore(tmp_path)
+    if analysis:
+        changelog = ChangelogEntry(
+            week="2026-W41",
+            notes=(
+                NoteChange(
+                    note_id=ItemId("arxiv:2410.12345"),
+                    title="Agent harness",
+                    kind="paper",
+                    change="created",
+                    depth="deep",
+                    source_text="full_text",
+                ),
+            ),
+        )
+        analyses.write(
+            AnalysisRun(
+                week="2026-W41",
+                run_id="r",
+                generated_at=NOW,
+                outcomes=(),
+                theme=None,
+                changelog=changelog,
+            )
+        )
+    return DigestStage(
+        TriageStore(tmp_path),
+        ItemStore.open(tmp_path),
+        RunStore(tmp_path),
+        PROFILE,
+        sender=Outbox(),
+        repo="me/data",
+        to="me@example.com",
+        clock=lambda: NOW,
+        kb=kb,
+        analyses=analyses,
+    )
+
+
+def test_digest_uses_analysis(tmp_path: Path) -> None:
+    mail = with_kb(tmp_path, analysis=True).run()
+    assert "kb/notes/papers/arxiv-2410.12345.md" in mail.html
+    assert "Analyse : Worth it." in mail.html
+    assert "Évolutions de la base" in mail.html
+    assert "nouvelle fiche" in mail.html
+
+
+def test_digest_without_analysis_run(tmp_path: Path) -> None:
+    mail = with_kb(tmp_path, analysis=False).run()
+    assert "kb/notes/papers/arxiv-2410.12345.md" in mail.html  # notes of earlier weeks still linked
+    assert "Évolutions de la base" not in mail.html

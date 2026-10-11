@@ -9,6 +9,7 @@ from typing import cast
 import numpy as np
 from pydantic import BaseModel
 
+from auto_biblio.domain.errors import ProviderUnavailableError
 from auto_biblio.domain.triage import LLMUsage, TriageBatch
 from auto_biblio.embeddings import Vector
 from auto_biblio.llm import LLMResult, LLMTask
@@ -91,3 +92,68 @@ class FakeRunner:
 
 def ignore_fallback(_role: str, _model_id: str, _reason: str) -> None:
     """Fallback hook that does nothing."""
+
+
+def answer_for(task: LLMTask[BaseModel]) -> dict[str, object]:
+    """Answer any task of the pipeline like a sensible model."""
+    name = task.output_type.__name__
+    if name == "TriageBatch":
+        return verdicts_for(cast("LLMTask[TriageBatch]", task)).model_dump()
+    short: dict[str, object] = {
+        "summary": "Résumé.",
+        "contribution": "Apport.",
+        "relevance": "Utile.",
+    }
+    if name == "ShortNote":
+        return short
+    if name == "DeepAnalysis":
+        return short | {
+            "problem": "Problème.",
+            "method": ["Étape"],
+            "results": ["+10 %"],
+            "limitations": [],
+            "positioning": "Position.",
+            "takeaways": ["À essayer"],
+            "further_reading": [],
+            "verdict": "À lire.",
+            "confidence": "high",
+        }
+    payload: dict[str, object] = json.loads(task.user_prompt)
+    previous = cast("dict[str, list[object]] | None", payload["previous_page"])
+    notes = cast("list[dict[str, str]]", payload["notes"])
+    kept = list(previous["further_reading"]) if previous else []
+    return {
+        "overview": "Vue.",
+        "key_concepts": ["Concept"],
+        "dominant_approaches": [],
+        "reference_tools": [
+            {"name": n["title"], "url": n["url"], "note_id": n["id"]} for n in notes[:2]
+        ],
+        "open_questions": [],
+        "further_reading": sorted({*map(str, kept), "https://example.org/survey"}),
+    }
+
+
+class PipelineRunner:
+    """`ModelRunner` answering every role with `answer_for`; counts calls per role."""
+
+    def __init__(self, failing: dict[str, set[str]] | None = None) -> None:
+        self.calls: list[str] = []
+        self.failing = failing or {}
+        """Roles each model id fails on (provider unavailable)."""
+
+    def run[T: BaseModel](self, task: LLMTask[T], spec: ModelSpec) -> LLMResult[T]:
+        self.calls.append(task.role)
+        if task.role in self.failing.get(spec.id, set()):
+            message = "down"
+            raise ProviderUnavailableError(spec.id, message)
+        output = task.output_type.model_validate(answer_for(cast("LLMTask[BaseModel]", task)))
+        usage = LLMUsage(
+            role=task.role,
+            model_id=spec.id,
+            input_tokens=1000,
+            output_tokens=200,
+            cost_usd=0.0,
+            cached=False,
+        )
+        return LLMResult(output=task.validate(output, spec.id), usage=usage)

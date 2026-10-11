@@ -5,6 +5,8 @@ from auto_biblio.publish.view import (
     DigestItem,
     DigestView,
     HealthSummary,
+    KBChange,
+    KBChanges,
     SourceHealth,
     ThemeSection,
 )
@@ -74,3 +76,35 @@ def test_render_contents() -> None:
 def test_render_snapshot() -> None:
     html, _ = render_digest(view())
     assert html == SNAPSHOT.read_text(encoding="utf-8")
+
+
+def test_render_kb_changes_and_note_links() -> None:
+    changed = view().model_copy(
+        update={
+            "kb_changes": KBChanges(
+                notes=(
+                    KBChange(
+                        title="Durable Agents", change="fiche approfondie", url="https://kb/x.md"
+                    ),
+                ),
+                theme="Agents",
+                theme_url="https://kb/themes/agentic.md",
+                links_removed=("https://old : Dead.",),
+            ),
+            "sections": (
+                ThemeSection(
+                    label="Agents",
+                    items=(item("With note", note_url="https://kb/x.md", verdict="À lire."),),
+                ),
+            ),
+        }
+    )
+    html, text = render_digest(changed)
+    assert "Évolutions de la base" in html
+    assert '<a href="https://kb/x.md">Durable Agents</a> : fiche approfondie' in html
+    assert 'Page thème <a href="https://kb/themes/agentic.md">Agents</a> réécrite' in html
+    assert "Analyse : À lire." in html
+    assert ">fiche</a>" in html
+    assert "## Évolutions de la base" in text
+    assert "Fiche : https://kb/x.md" in text
+    assert "- Lien retiré : https://old : Dead." in text
