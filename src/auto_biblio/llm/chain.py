@@ -57,7 +57,7 @@ class ModelChain:
             try:
                 result = self._run_with_retry(task, spec)
             except (ProviderQuotaError, ProviderUnavailableError, LLMOutputInvalidError) as exc:
-                attempts.append(f"{spec.id}: {exc}")
+                attempts.append(str(exc))  # already prefixed with the model id
                 logger.warning("model %s failed for %s: %s", spec.id, task.role, exc)
                 self._on_fallback(task.role, spec.id, type(exc).__name__)
                 continue

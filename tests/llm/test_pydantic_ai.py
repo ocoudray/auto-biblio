@@ -83,3 +83,43 @@ def test_runner_maps_unparseable_output() -> None:
 def test_runner_applies_task_validation() -> None:
     with pytest.raises(LLMOutputInvalidError, match="too big"):
         runner(TestModel(custom_output_args={"value": 9})).run(task(validate_max=5), SPEC)
+
+
+def google_body(code: int, message: str, details: list[object]) -> dict[str, object]:
+    return {"error": {"code": code, "message": message, "status": "X", "details": details}}
+
+
+def test_runner_keeps_the_provider_message_short() -> None:
+    long = "This model is currently experiencing high demand.\n" + "x" * 1000
+    body = google_body(503, long, [])
+    with pytest.raises(ProviderUnavailableError) as excinfo:
+        runner(raising(ModelHTTPError(503, "m", body))).run(task(), SPEC)
+    message = str(excinfo.value)
+    assert message.startswith("test:m: HTTP 503: This model is currently experiencing high demand")
+    assert len(message) < 250
+    assert excinfo.value.transient
+
+
+def test_runner_reads_the_retry_delay() -> None:
+    details: list[object] = [
+        {"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": "18.7s"}
+    ]
+    body = google_body(429, "Quota exceeded", details)
+    with pytest.raises(ProviderQuotaError) as excinfo:
+        runner(raising(ModelHTTPError(429, "m", body))).run(task(), SPEC)
+    assert excinfo.value.retry_after == "18"
+    assert excinfo.value.transient
+
+
+def test_runner_flags_a_daily_quota_as_lasting() -> None:
+    violation = {"quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier"}
+    details: list[object] = [{"violations": [violation]}]
+    body = google_body(429, "Quota exceeded", details)
+    with pytest.raises(ProviderQuotaError) as excinfo:
+        runner(raising(ModelHTTPError(429, "m", body))).run(task(), SPEC)
+    assert not excinfo.value.transient
+
+
+def test_runner_tolerates_an_unknown_error_body() -> None:
+    with pytest.raises(ProviderUnavailableError, match="HTTP 500: "):
+        runner(raising(ModelHTTPError(500, "m", "<html>oops</html>"))).run(task(), SPEC)

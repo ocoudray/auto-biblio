@@ -23,6 +23,10 @@ class ModelSpec(BaseModel):
     output_usd_per_mtok: float = Field(ge=0.0)
     batch_size: int = Field(ge=1)
     max_output_tokens: int = Field(default=4096, ge=1)
+    min_interval_s: float = Field(default=0.0, ge=0.0)
+    """Minimum delay between two calls to this model (free tiers cap requests per minute)."""
+    max_retries: int = Field(default=2, ge=0)
+    """Retries of a call refused by a transient provider error before the chain moves on."""
 
     @property
     def is_free(self) -> bool:

@@ -68,11 +68,27 @@ class _ModelError(AutoBiblioError):
         super().__init__(f"{model_id}: {message}")
 
 
-class ProviderQuotaError(_ModelError):
+class _ProviderError(_ModelError):
+    def __init__(
+        self,
+        model_id: str,
+        message: str,
+        *,
+        retry_after: str | None = None,
+        transient: bool = True,
+    ) -> None:
+        # retry_after: seconds the provider asks to wait, if it says; transient: whether a
+        # retry later in the run may succeed (false for a daily quota).
+        self.retry_after = retry_after
+        self.transient = transient
+        super().__init__(model_id, message)
+
+
+class ProviderQuotaError(_ProviderError):
     """The provider refused the call because a quota or rate limit was reached."""
 
 
-class ProviderUnavailableError(_ModelError):
+class ProviderUnavailableError(_ProviderError):
     """The provider could not be reached or answered with an error."""
 
 

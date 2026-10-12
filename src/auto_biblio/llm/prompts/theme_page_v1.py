@@ -13,8 +13,9 @@ VERSION = "theme_page_v1"
 
 _SYSTEM = """\
 You maintain the page of one theme in a personal knowledge base on AI, read by an expert
-practitioner. Write in French; keep technical terms and names in English. Each field is plain
-text on a single line, without Markdown.
+practitioner. Write every field in French, even when the notes quote English text: translate
+it. Keep in English only technical terms and names. Each field is plain text on a single line,
+without Markdown.
 
 Theme: {label}
 Scope: {description}

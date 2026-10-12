@@ -61,9 +61,12 @@ The triage puts every item on comparable scales before combining anything.
 ## LLM, budget and degradation
 
 `config/llm.yaml` lists the models, the chain tried for each role and the weekly budget
-(dollars for paid models, tokens for all). A model whose API key is missing is skipped. On a
-quota or availability error, or an invalid answer after one corrective retry, the next model
-of the chain takes over; every fallback is written in the journal and the digest footer.
+(dollars for paid models, tokens for all). A model whose API key is missing is skipped. Calls
+to a model are spaced by its `min_interval_s`, to stay under the free tiers' requests-per-minute
+caps. A rate limit or an overloaded provider is retried up to `max_retries` times (default 2),
+after the delay the provider asks for or an exponential backoff; a daily quota is not retried.
+On a persisting quota or availability error, or an invalid answer after one corrective retry,
+the next model of the chain takes over; every fallback is written in the journal and the digest footer.
 Answers are cached in `state/llm_cache/`, so re-running a week costs nothing and never
 exceeds its budget. When the budget runs out, the remaining items are kept unverified.
 
