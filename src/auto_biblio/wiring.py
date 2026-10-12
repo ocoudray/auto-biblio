@@ -19,6 +19,7 @@ from auto_biblio.llm import ModelRunner, StructuredLLM
 from auto_biblio.llm.budgeted import BudgetedRunner
 from auto_biblio.llm.cached import CachedLLM
 from auto_biblio.llm.chain import FallbackHook, ModelChain
+from auto_biblio.llm.paced import PacedRunner
 from auto_biblio.llm.pydantic_ai import PydanticAIRunner
 from auto_biblio.publish import MailSender
 from auto_biblio.publish.smtp import SmtpMailSender
@@ -144,7 +145,7 @@ def _real_embedder(_settings: Settings) -> Embedder:  # pragma: no cover - loads
 
 
 def _real_runner(settings: Settings) -> ModelRunner:  # pragma: no cover - real providers
-    return PydanticAIRunner(lambda spec: model_for(spec, settings))
+    return PacedRunner(PydanticAIRunner(lambda spec: model_for(spec, settings)))
 
 
 def real_mail_sender(settings: Settings) -> MailSender | None:

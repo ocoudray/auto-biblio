@@ -15,7 +15,8 @@ DEEP_VERSION = "deep_analysis_v1"
 
 _COMMON = """\
 You write notes for a personal knowledge base on AI, read by an expert practitioner.
-Write in French; keep technical terms, model, library and method names in English.
+Write every field in French, even when the source text is in English: translate it. Keep
+in English only technical terms and the names of models, libraries and methods.
 Be factual and dense: no hype, no filler. Never invent numbers, names or links: use only
 what the provided text says. Each field is plain text on a single line, without Markdown.
 

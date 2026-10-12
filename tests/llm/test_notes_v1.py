@@ -46,6 +46,7 @@ def test_prompts_carry_themes_language_and_text() -> None:
     assert task.prompt_version == "short_note_v1"
     assert "Agents: Agent harnesses." in task.system_prompt
     assert "French" in task.system_prompt
+    assert "translate" in task.system_prompt
     assert '"text_source": "full_text"' in task.user_prompt
     assert task.output_type.__name__ == "ShortNote"
 

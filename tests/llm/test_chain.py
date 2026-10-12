@@ -62,7 +62,7 @@ def test_chain_exhausted() -> None:
     llm, fallbacks = chain(runner)
     with pytest.raises(ChainExhaustedError) as excinfo:
         llm.run(make_task())
-    assert len(excinfo.value.attempts) == 2
+    assert excinfo.value.attempts == ("t:free: down", "t:paid: 429")
     assert len(fallbacks) == 2
 
 

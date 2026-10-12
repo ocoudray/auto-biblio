@@ -24,7 +24,7 @@ permissions:
 jobs:
   triage:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       AUTO_BIBLIO_GITHUB_TOKEN: $${{ secrets.GITHUB_TOKEN }}
       AUTO_BIBLIO_DATA_REPO: $${{ github.repository }}
