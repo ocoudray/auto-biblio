@@ -20,6 +20,7 @@ from auto_biblio.llm import LLMResult, LLMTask
 from auto_biblio.repo_config.llm import ModelSpec
 
 HTTP_TOO_MANY_REQUESTS = 429
+HTTP_SERVER_ERROR = 500
 MESSAGE_MAX = 160
 """Provider messages are cut to this length: they end up in journals and the digest."""
 
@@ -70,12 +71,11 @@ def _http_error(
         if d.retry_delay and (m := _RETRY_DELAY.match(d.retry_delay))
     ]
     daily = any(_DAILY_QUOTA in v.quota_id for d in error.details for v in d.violations)
-    error_type = (
-        ProviderQuotaError
-        if exc.status_code == HTTP_TOO_MANY_REQUESTS
-        else ProviderUnavailableError
-    )
-    return error_type(model_id, message, retry_after=next(iter(delays), None), transient=not daily)
+    quota = exc.status_code == HTTP_TOO_MANY_REQUESTS
+    # A client error (unknown model, bad request) or a spent daily quota will not clear today.
+    transient = (quota and not daily) or exc.status_code >= HTTP_SERVER_ERROR
+    error_type = ProviderQuotaError if quota else ProviderUnavailableError
+    return error_type(model_id, message, retry_after=next(iter(delays), None), transient=transient)
 
 
 class PydanticAIRunner:

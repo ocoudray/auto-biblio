@@ -123,3 +123,10 @@ def test_runner_flags_a_daily_quota_as_lasting() -> None:
 def test_runner_tolerates_an_unknown_error_body() -> None:
     with pytest.raises(ProviderUnavailableError, match="HTTP 500: "):
         runner(raising(ModelHTTPError(500, "m", "<html>oops</html>"))).run(task(), SPEC)
+
+
+def test_runner_flags_a_client_error_as_lasting() -> None:
+    body = google_body(404, "models/gemini-9-flash is not found", [])
+    with pytest.raises(ProviderUnavailableError, match="HTTP 404") as excinfo:
+        runner(raising(ModelHTTPError(404, "m", body))).run(task(), SPEC)
+    assert not excinfo.value.transient

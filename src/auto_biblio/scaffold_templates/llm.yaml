@@ -1,25 +1,66 @@
 # LLM catalogue, chains of models per role and weekly budget.
 # Model ids are pydantic-ai ids: "<provider>:<model>". Supported providers: google, anthropic.
-# Prices are per million tokens; 0 means a free quota. Checked on 2026-10-10:
-#   - gemini-3.5-flash-lite, gemini-3.5-flash and gemma-4-31b-it: free tier of Google AI
-#     Studio, one key for all, separate rate limits per model.
-#   - to add a paid fallback later, e.g. Claude Haiku 5.5 (0.10 / 0.50 USD):
-#       haiku: {id: anthropic:claude-haiku-5-5, input_usd_per_mtok: 0.10,
-#               output_usd_per_mtok: 0.50, batch_size: 15}
-#     then append it to the chain and set the ANTHROPIC_API_KEY secret.
-# min_interval_s spaces the calls to a model to stay under its requests-per-minute cap (free
-# tier: 5/min for flash). A call refused by a rate limit or an overloaded provider is retried
-# up to max_retries times (default 2), after the delay the provider asks for, before the next
-# model of the chain takes over.
+# Prices are per million tokens; 0 means a free quota. To add a paid fallback later, e.g.
+# Claude Haiku 5.5 (0.10 / 0.50 USD):
+#   haiku: {id: anthropic:claude-haiku-5-5, input_usd_per_mtok: 0.10,
+#           output_usd_per_mtok: 0.50, batch_size: 15}
+# then append it to a chain and set the ANTHROPIC_API_KEY secret.
+#
+# Free tier of Google AI Studio (aistudio.google.com/rate-limit, read on 2026-10-13). Limits
+# apply per project and per model, so every model below has its own quota:
+#   model                    RPM   TPM    RPD
+#   gemini-3.x-flash         5     250K   20     (3, 3.6, 3.7 and 3.8: one quota each)
+#   gemini-3.x-flash-lite    15    250K   500    (3.1 and 3.5: one quota each)
+#   gemma-4-31b-it           30    16K    14.4K  (16K tokens per minute: small prompts only)
+# Daily quotas reset at midnight Pacific time.
+#
+# Roles get the model their prompt size and value call for:
+#   - triage and short notes (small prompts, most calls): Flash-Lite, then Gemma;
+#   - deep analyses and theme page (up to 30-40K input tokens, few calls): the Flash models,
+#     each with its own 20 requests per day, then Flash-Lite. Never Gemma: its 16K tokens per
+#     minute cannot take these prompts.
+# tpm is the model's tokens-per-minute cap: a call estimated larger skips the model, so a
+# misplaced Gemma never fails a deep analysis.
+# min_interval_s spaces the calls to a model to stay under its per-minute caps (requests, or
+# tokens for Gemma). A call refused by a rate limit or an overloaded provider is retried up
+# to max_retries times (default 2), unless the daily quota is spent; then the next model of
+# the chain takes over.
 models:
   flash-lite:
     id: google:gemini-3.5-flash-lite
     input_usd_per_mtok: 0
     output_usd_per_mtok: 0
     batch_size: 20
-    min_interval_s: 5
-  flash:
-    id: google:gemini-3.5-flash
+    min_interval_s: 4.5
+  flash-lite-3.1:
+    id: google:gemini-3.1-flash-lite
+    input_usd_per_mtok: 0
+    output_usd_per_mtok: 0
+    batch_size: 20
+    min_interval_s: 4.5
+  flash-3.8:
+    id: google:gemini-3.8-flash
+    input_usd_per_mtok: 0
+    output_usd_per_mtok: 0
+    batch_size: 1
+    max_output_tokens: 8192
+    min_interval_s: 13
+  flash-3.7:
+    id: google:gemini-3.7-flash
+    input_usd_per_mtok: 0
+    output_usd_per_mtok: 0
+    batch_size: 1
+    max_output_tokens: 8192
+    min_interval_s: 13
+  flash-3.6:
+    id: google:gemini-3.6-flash
+    input_usd_per_mtok: 0
+    output_usd_per_mtok: 0
+    batch_size: 1
+    max_output_tokens: 8192
+    min_interval_s: 13
+  flash-3:
+    id: google:gemini-3-flash
     input_usd_per_mtok: 0
     output_usd_per_mtok: 0
     batch_size: 1
@@ -30,15 +71,16 @@ models:
     input_usd_per_mtok: 0
     output_usd_per_mtok: 0
     batch_size: 10
-    min_interval_s: 3
+    max_output_tokens: 8192
+    min_interval_s: 30
+    tpm: 16000
 
-# Models tried in order: Gemma takes over when the first model hits its quota or fails.
-# A model whose API key is missing is skipped.
+# Models tried in order; a model whose API key is missing is skipped.
 chains:
-  triage: [flash-lite, gemma]       # rate a batch of items against the profile
-  short_note: [flash, gemma]        # short note from the abstract
-  deep_analysis: [flash, gemma]     # deep analysis from the full text
-  synthesis: [flash, gemma]         # weekly theme page
+  triage: [flash-lite, flash-lite-3.1, gemma]
+  short_note: [flash-lite, flash-lite-3.1, gemma]
+  deep_analysis: [flash-3.8, flash-3.7, flash-3.6, flash-3, flash-lite]
+  synthesis: [flash-3.8, flash-3.7, flash-3.6, flash-3, flash-lite]
 
 # Weekly caps: tokens count for every model, dollars for paid ones only.
 weekly_budget:

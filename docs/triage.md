@@ -64,7 +64,10 @@ The triage puts every item on comparable scales before combining anything.
 (dollars for paid models, tokens for all). A model whose API key is missing is skipped. Calls
 to a model are spaced by its `min_interval_s`, to stay under the free tiers' requests-per-minute
 caps. A rate limit or an overloaded provider is retried up to `max_retries` times (default 2),
-after the delay the provider asks for or an exponential backoff; a daily quota is not retried.
+after the delay the provider asks for or an exponential backoff. A spent daily quota or an
+unknown model is not retried, and the model is skipped for the rest of the run; so is a model
+whose `tpm` (tokens per minute) is smaller than the call. Google's free tier gives each model
+its own quota: the default `llm.yaml` chains several Flash models for the large prompts.
 On a persisting quota or availability error, or an invalid answer after one corrective retry,
 the next model of the chain takes over; every fallback is written in the journal and the digest footer.
 Answers are cached in `state/llm_cache/`, so re-running a week costs nothing and never

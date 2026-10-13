@@ -24,7 +24,9 @@ class ModelChain:
     """`StructuredLLM` that falls back along the chain of models configured for a role.
 
     An invalid output gets one retry with the validation error before moving on. A
-    budget error is not a model failure: it propagates at once.
+    budget error is not a model failure: it propagates at once. A model whose failure will not
+    clear today (daily quota spent, unknown model) is skipped for the rest of the run, and so
+    is a model whose tokens-per-minute cap is smaller than the call.
     """
 
     def __init__(self, runner: ModelRunner, config: LLMConfig, on_fallback: FallbackHook) -> None:
@@ -38,6 +40,7 @@ class ModelChain:
         self._runner = runner
         self._config = config
         self._on_fallback = on_fallback
+        self._unusable: set[str] = set()
 
     def run[T: BaseModel](self, task: LLMTask[T]) -> LLMResult[T]:
         """Run a task with the first model of the chain that succeeds.
@@ -53,10 +56,20 @@ class ModelChain:
         """
         attempts: list[str] = []
         chain = self._config.chain(task.role)
+        prompt_chars = len(task.system_prompt) + len(task.user_prompt)
         for spec in chain:
+            skip = self._skip_reason(spec, prompt_chars)
+            if skip is not None:
+                attempts.append(f"{spec.id}: skipped, {skip}")
+                continue
             try:
                 result = self._run_with_retry(task, spec)
             except (ProviderQuotaError, ProviderUnavailableError, LLMOutputInvalidError) as exc:
+                if (
+                    isinstance(exc, (ProviderQuotaError, ProviderUnavailableError))
+                    and not exc.transient
+                ):
+                    self._unusable.add(spec.id)
                 attempts.append(str(exc))  # already prefixed with the model id
                 logger.warning("model %s failed for %s: %s", spec.id, task.role, exc)
                 self._on_fallback(task.role, spec.id, type(exc).__name__)
@@ -66,6 +79,15 @@ class ModelChain:
                 return LLMResult(output=result.output, usage=usage)
             return result
         raise ChainExhaustedError(task.role, tuple(attempts))
+
+    def _skip_reason(self, spec: ModelSpec, prompt_chars: int) -> str | None:
+        if spec.id in self._unusable:
+            return "failed earlier in the run for the day"
+        if not spec.fits(prompt_chars):
+            return (
+                f"call of ~{spec.call_tokens(prompt_chars)} tokens over its {spec.tpm} per minute"
+            )
+        return None
 
     def _run_with_retry[T: BaseModel](self, task: LLMTask[T], spec: ModelSpec) -> LLMResult[T]:
         try:

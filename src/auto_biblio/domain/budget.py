@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict
 
 from auto_biblio.domain.errors import BudgetExhaustedError
 from auto_biblio.domain.triage import LLMUsage
-from auto_biblio.repo_config.llm import Budget, ModelSpec
+from auto_biblio.repo_config.llm import CHARS_PER_TOKEN, Budget, ModelSpec
 
 _USD: Literal["usd"] = "usd"
 _TOKENS: Literal["tokens"] = "tokens"
@@ -36,7 +36,7 @@ class BudgetLedger:
         spent_usd: float = 0.0,
         spent_tokens: int = 0,
         *,
-        chars_per_token: float = 4.0,
+        chars_per_token: float = CHARS_PER_TOKEN,
         safety_margin: float = 1.2,
     ) -> None:
         """Start a ledger, possibly from what was already spent this week.
