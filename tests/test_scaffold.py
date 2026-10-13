@@ -88,10 +88,14 @@ def test_scaffolded_triage_config(tmp_path: Path) -> None:
     llm = config.require_llm()
     assert [s.id for s in llm.chain("triage")] == [
         "google:gemini-3.5-flash-lite",
+        "google:gemini-3.1-flash-lite",
         "google:gemma-4-31b-it",
     ]
     llm.require("triage", "short_note", "deep_analysis", "synthesis")
-    assert llm.chain("deep_analysis")[0].id == "google:gemini-3.5-flash"
+    assert llm.chain("deep_analysis")[0].id == "google:gemini-3.8-flash"
+    # Every model of the large-prompt chains can take the largest prompt the analysis sends.
+    assert all(s.fits(config.analysis.max_input_chars) for s in llm.chain("deep_analysis"))
+    assert all(s.fits(config.analysis.synthesis_max_chars) for s in llm.chain("synthesis"))
 
 
 def test_workflows_pin_the_version(tmp_path: Path) -> None:

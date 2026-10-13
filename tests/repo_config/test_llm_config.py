@@ -86,3 +86,27 @@ def test_role_chain_missing_is_config_error() -> None:
         cfg.require("triage", "deep_analysis", "synthesis")
     with pytest.raises(ConfigError, match="short_note"):
         cfg.chain("short_note")
+
+
+def test_model_call_tokens_and_tpm() -> None:
+    spec = LLMConfig.model_validate(
+        {
+            "models": {**MODELS, "gemma": {**MODELS["flash"], "id": "t:g", "tpm": 16_000}},
+            "chains": {"triage": ["gemma"]},
+            "weekly_budget": {"usd": 0, "tokens": 1},
+        }
+    ).models["gemma"]
+    assert spec.call_tokens(4_000) == 1_000 + spec.max_output_tokens
+    assert spec.fits(4_000)
+    assert not spec.fits(60_000)
+    assert (
+        LLMConfig.model_validate(
+            {
+                "models": MODELS,
+                "chains": {"triage": ["flash"]},
+                "weekly_budget": {"usd": 0, "tokens": 1},
+            }
+        )
+        .models["flash"]
+        .fits(10_000_000)
+    )

@@ -1,5 +1,6 @@
 """LLM configuration (`config/llm.yaml`): model catalogue, chains per role and weekly budget."""
 
+import math
 from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -10,6 +11,9 @@ Role = Literal["triage", "short_note", "deep_analysis", "synthesis"]
 """What a model is used for."""
 
 LLM_PATH = "config/llm.yaml"
+
+CHARS_PER_TOKEN = 4.0
+"""Rough size of a token, used to estimate prompts before sending them."""
 
 
 class ModelSpec(BaseModel):
@@ -27,11 +31,35 @@ class ModelSpec(BaseModel):
     """Minimum delay between two calls to this model (free tiers cap requests per minute)."""
     max_retries: int = Field(default=2, ge=0)
     """Retries of a call refused by a transient provider error before the chain moves on."""
+    tpm: int | None = Field(default=None, ge=1)
+    """Tokens per minute the model accepts, if capped; larger calls skip the model."""
 
     @property
     def is_free(self) -> bool:
         """Whether calls to this model cost nothing (free quota)."""
         return self.input_usd_per_mtok == 0 and self.output_usd_per_mtok == 0
+
+    def call_tokens(self, prompt_chars: int) -> int:
+        """Estimate the tokens of a call: the prompt plus the maximum output.
+
+        Args:
+            prompt_chars: Length of the whole prompt.
+
+        Returns:
+            The estimated tokens.
+        """
+        return math.ceil(prompt_chars / CHARS_PER_TOKEN) + self.max_output_tokens
+
+    def fits(self, prompt_chars: int) -> bool:
+        """Whether a call of this size fits within the model's tokens-per-minute cap.
+
+        Args:
+            prompt_chars: Length of the whole prompt.
+
+        Returns:
+            True when the model has no cap or the call stays under it.
+        """
+        return self.tpm is None or self.call_tokens(prompt_chars) <= self.tpm
 
     def cost_usd(self, input_tokens: int, output_tokens: int) -> float:
         """Price of a call.

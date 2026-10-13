@@ -10,6 +10,7 @@ nav = [
   { "Knowledge base" = "knowledge-base.md" },
   { "Upgrade to 0.2" = "upgrade-0.2.md" },
   { "Upgrade to 0.4" = "upgrade-0.4.md" },
+  { "Upgrade to 0.5" = "upgrade-0.5.md" },
   { "Design" = [
     { "Vision" = "superpowers/specs/2026-10-10-auto-biblio-vision-design.md" },
     { "Collection spec" = "superpowers/specs/2026-10-10-socle-collecte-design.md" },
