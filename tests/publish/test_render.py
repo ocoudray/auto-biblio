@@ -149,7 +149,7 @@ def test_markdown_digest_lists_items_and_notes() -> None:
     page = render_digest_markdown(markdown_view())
     assert page.startswith("# Digest — 2026-W41\n")
     assert "## Agents" in page
-    assert "[Durable | Agents](https://arxiv.org/abs/2410.12345)" in page
+    assert "[Durable \\| Agents](https://arxiv.org/abs/2410.12345)" in page
     assert "[fiche](../notes/papers/x.md)" in page
     assert "Analyse : À lire." in page
     assert "## Découvertes" in page
@@ -162,3 +162,20 @@ def test_markdown_digest_has_no_feedback_nor_health() -> None:
     assert "issues/new" not in page
     assert "import-ai" not in page
     assert "tokens" not in page
+
+
+def test_markdown_digest_escapes_titles() -> None:
+    hostile = markdown_view().model_copy(
+        update={
+            "sections": (
+                ThemeSection(
+                    label="Agents",
+                    items=(item("Foo] (bar <img src=x>", reason="<b>bold</b>"),),
+                ),
+            )
+        }
+    )
+    page = render_digest_markdown(hostile)
+    assert "[Foo) (bar &lt;img src=x>](https://arxiv.org/abs/2410.12345)" in page
+    assert "<img" not in page
+    assert "<b>" not in page

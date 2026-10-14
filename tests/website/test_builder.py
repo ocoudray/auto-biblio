@@ -4,7 +4,7 @@ from pathlib import Path, PurePosixPath
 import pytest
 from builders import make_note, make_theme_page
 
-from auto_biblio.domain.errors import SiteBuildError
+from auto_biblio.domain.errors import SiteBuildError, SiteOutputError
 from auto_biblio.domain.ids import ItemId
 from auto_biblio.domain.kb.notes import render_note
 from auto_biblio.domain.kb.pages import render_theme_page
@@ -64,10 +64,33 @@ def test_empty_plan_builds(tmp_path: Path) -> None:
 
 def test_rebuild_removes_stale_files(tmp_path: Path) -> None:
     out = tmp_path / "out"
-    out.mkdir()
+    SiteBuilder(strict=True).build(small_plan(), "Veille IA", out)
     (out / "old.html").write_text("x")
     SiteBuilder(strict=True).build(small_plan(), "Veille IA", out)
     assert not (out / "old.html").exists()
+
+
+def test_build_into_an_empty_directory(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    out.mkdir()
+    SiteBuilder(strict=True).build(small_plan(), "Veille IA", out)
+    assert (out / "index.html").exists()
+
+
+def test_refuses_to_replace_a_directory_it_did_not_build(tmp_path: Path) -> None:
+    out = tmp_path / "data"
+    out.mkdir()
+    (out / "precious.md").write_text("mine")
+    with pytest.raises(SiteOutputError, match="not a site built by auto-biblio"):
+        SiteBuilder().build(small_plan(), "Veille IA", out)
+    assert (out / "precious.md").read_text() == "mine"
+
+
+def test_refuses_a_file_as_output(tmp_path: Path) -> None:
+    out = tmp_path / "file"
+    out.write_text("x")
+    with pytest.raises(SiteOutputError, match="not a directory"):
+        SiteBuilder().build(small_plan(), "Veille IA", out)
 
 
 def test_broken_link_fails_in_strict_mode(tmp_path: Path) -> None:

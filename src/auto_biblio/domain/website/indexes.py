@@ -7,22 +7,11 @@ from auto_biblio.domain.features import ThemeId
 from auto_biblio.domain.kb.notes import Note, NoteKind
 from auto_biblio.domain.kb.pages import ThemePage
 from auto_biblio.domain.website.pages import DEPTH_LABELS
+from auto_biblio.domain.website.text import link_text
 from auto_biblio.repo_config.profile import Profile
 
 KIND_TITLES: dict[NoteKind, str] = {"paper": "Articles", "tool": "Outils", "post": "Billets"}
 NO_NOTE = "Aucune fiche pour l'instant."
-
-
-def table_cell(text: str) -> str:
-    """Make a text safe inside a Markdown table cell and a link text.
-
-    Args:
-        text: Any one-line text.
-
-    Returns:
-        The text, with `|` escaped and square brackets turned into parentheses.
-    """
-    return text.replace("|", "\\|").replace("[", "(").replace("]", ")")
 
 
 def _newest_first(notes: Sequence[Note]) -> list[Note]:
@@ -32,7 +21,7 @@ def _newest_first(notes: Sequence[Note]) -> list[Note]:
 def _link(note: Note) -> str:
     # Index pages live in `notes/`, next to the per-kind folders.
     target = note.path.relative_to(PurePosixPath("notes"))
-    return f"[{table_cell(note.meta.title)}]({target})"
+    return f"[{link_text(note.meta.title)}]({target})"
 
 
 def notes_index(kind: NoteKind, notes: Sequence[Note], labels: Mapping[ThemeId, str]) -> str:
@@ -47,7 +36,7 @@ def notes_index(kind: NoteKind, notes: Sequence[Note], labels: Mapping[ThemeId, 
         The page: a table, newest first.
     """
     rows = [
-        f"| {_link(n)} | {table_cell(', '.join(labels.get(t, t) for t in n.meta.themes))} "
+        f"| {_link(n)} | {link_text(', '.join(labels.get(t, t) for t in n.meta.themes))} "
         f"| {DEPTH_LABELS[n.meta.depth]} | {n.meta.first_seen.isoformat()} |"
         for n in _newest_first([n for n in notes if n.meta.kind == kind])
     ]
@@ -114,7 +103,7 @@ def home(
     if week:
         parts.append("## Cette semaine\n\n" + "\n".join(week) + "\n")
     with_page = [
-        f"- [{t.label}](themes/{t.id}.md) — mis à jour le "
+        f"- [{link_text(t.label)}](themes/{t.id}.md) — mis à jour le "
         f"{themes[ThemeId(t.id)].meta.updated_at.isoformat()}"
         for t in profile.themes
         if ThemeId(t.id) in themes

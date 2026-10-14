@@ -135,6 +135,7 @@ def test_weekly_builds_and_deploys_the_site_before_the_digest(tmp_path: Path) ->
         "Keep the dry-run digest",
         "Keep the dry-run site",
         "Commit state",
+        "Report a site failure",
     ]
     assert steps["Site build"]["continue-on-error"] is True
     assert steps["Site build"]["run"] == "auto-biblio site build --out site"
@@ -145,3 +146,14 @@ def test_weekly_builds_and_deploys_the_site_before_the_digest(tmp_path: Path) ->
     assert "pages deploy site" in str(deploy["with"])
     assert "${{ secrets.CLOUDFLARE_API_TOKEN }}" in str(deploy["with"])
     assert "inputs.dry_run" in str(steps["Keep the dry-run site"]["if"])
+
+
+def test_weekly_fails_the_run_after_a_site_failure(tmp_path: Path) -> None:
+    steps = weekly_steps(tmp_path)
+    assert list(steps)[-1] == "Report a site failure"
+    assert steps["Site build"]["id"] == "site_build"
+    assert steps["Site deploy"]["id"] == "site_deploy"
+    report = steps["Report a site failure"]
+    assert "steps.site_build.outcome == 'failure'" in str(report["if"])
+    assert "steps.site_deploy.outcome == 'failure'" in str(report["if"])
+    assert "exit 1" in str(report["run"])

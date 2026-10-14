@@ -25,7 +25,9 @@ python -m http.server -d site 8000    # then open http://localhost:8000
 ```
 
 A note or theme page that cannot be read is published as it is, with a `warning:` line.
-`site build` exits with code 5 when zensical fails.
+Raw HTML in titles, notes and pages is shown as text, never run. `--out` must be a new or
+empty directory, or a site built earlier by `site build`: anything else is refused, so that a
+wrong path never wipes your data. `site build` exits with code 5 when it fails.
 
 ## Publishing on Cloudflare (once)
 
@@ -68,5 +70,7 @@ triage → analyze → site build → site deploy → digest → commit
 ```
 
 `Site build` and `Site deploy` never block the digest. If they fail, the digest is sent
-anyway; links to notes created that week answer 404 until the next successful deployment.
+anyway and the state is committed; the last step, *Report a site failure*, then marks the run
+as failed so that GitHub notifies you. Links to notes created that week answer 404 until the
+next successful deployment.
 A dry run builds the site without deploying it and keeps it as the `site` artifact of the run.

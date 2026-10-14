@@ -11,4 +11,5 @@ Version 0.6 publishes the knowledge base as a private site and links the digest 
 4. **`config/site.yaml`.** Add it with your `site_url` once the first deployment works: from
    then on, the digest links to the site and has a *Voir en ligne* link.
 
-Until step 3 is done, `Site deploy` fails without blocking anything else.
+Until step 3 is done, `Site deploy` fails without blocking anything else, and the weekly run
+is reported failed so that you do not forget it.

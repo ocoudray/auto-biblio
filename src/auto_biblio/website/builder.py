@@ -8,9 +8,11 @@ import tempfile
 from collections.abc import Sequence
 from pathlib import Path
 
-from auto_biblio.domain.errors import SiteBuildError
+from auto_biblio.domain.errors import SiteBuildError, SiteOutputError
 from auto_biblio.domain.website.plan import NavEntry, SitePlan
 
+MARKER = ".auto-biblio-site"
+"""File left in every built site: only such a directory, or an empty one, is ever replaced."""
 FEATURES = ("navigation.indexes", "navigation.instant", "navigation.top", "search.highlight")
 _PALETTES = """
 [[project.theme.palette]]
@@ -84,8 +86,10 @@ class SiteBuilder:
             out: Destination directory.
 
         Raises:
+            SiteOutputError: If `out` exists and is neither empty nor a site built here.
             SiteBuildError: If zensical fails.
         """
+        _check_output(out)
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             for path, text in plan.pages.items():
@@ -104,6 +108,17 @@ class SiteBuilder:
             )
             if result.returncode != 0:
                 raise SiteBuildError(result.stderr or result.stdout)
+            (root / "site" / MARKER).write_text("", encoding="utf-8")
             if out.exists():
                 shutil.rmtree(out)
             shutil.copytree(root / "site", out)
+
+
+def _check_output(out: Path) -> None:
+    # `out` is wiped before the copy: refuse anything that could hold the user's data.
+    if not out.exists():
+        return
+    if not out.is_dir():
+        raise SiteOutputError(str(out), "not a directory")
+    if any(out.iterdir()) and not (out / MARKER).exists():
+        raise SiteOutputError(str(out), "not a site built by auto-biblio and not empty")

@@ -2,6 +2,7 @@
 
 from jinja2 import Environment, PackageLoader, StrictUndefined, select_autoescape
 
+from auto_biblio.domain.website.text import link_text
 from auto_biblio.publish.view import DigestView
 
 _ENV = Environment(
@@ -10,6 +11,8 @@ _ENV = Environment(
     undefined=StrictUndefined,
     keep_trailing_newline=True,
 )
+# Markdown pages are not HTML-escaped by Jinja: their untrusted fields go through this filter.
+_ENV.filters["md"] = link_text
 
 
 def render_digest(view: DigestView) -> tuple[str, str]:

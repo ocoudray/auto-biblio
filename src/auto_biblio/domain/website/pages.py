@@ -6,6 +6,7 @@ from auto_biblio.domain.errors import KBFormatError
 from auto_biblio.domain.features import ThemeId
 from auto_biblio.domain.kb.notes import Depth, Note, NoteKind, parse_note
 from auto_biblio.domain.kb.pages import ThemePage, parse_theme_page
+from auto_biblio.domain.website.text import escape_body, link_text
 
 KIND_LABELS: dict[NoteKind, str] = {"paper": "Article", "tool": "Outil", "post": "Billet"}
 DEPTH_LABELS: dict[Depth, str] = {"short": "fiche courte", "deep": "fiche approfondie"}
@@ -20,22 +21,23 @@ def note_page(text: str, origin: str, labels: Mapping[ThemeId, str]) -> tuple[st
         labels: Theme labels by id; an unknown theme shows its id.
 
     Returns:
-        The page and the parsed note, or the file unchanged and None when it cannot be read.
+        The page (raw HTML neutralised) and the parsed note, or the page alone and None when
+        the file cannot be read.
     """
     try:
         note = parse_note(text, origin)
     except KBFormatError:
-        return text, None
+        return escape_body(text), None
     meta = note.meta
     parts = [
         f"[Source]({meta.url})",
         KIND_LABELS[meta.kind],
-        *(labels.get(theme, theme) for theme in meta.themes),
+        *(link_text(labels.get(theme, theme)) for theme in meta.themes),
         DEPTH_LABELS[meta.depth],
         f"vue le {meta.first_seen.isoformat()}",
         f"analysée le {meta.analyzed_at.isoformat()}",
     ]
-    return _under_title(text, "> " + " · ".join(parts)), note
+    return _under_title(escape_body(text), "> " + " · ".join(parts)), note
 
 
 def theme_page(text: str, origin: str) -> tuple[str, ThemePage | None]:
@@ -52,8 +54,9 @@ def theme_page(text: str, origin: str) -> tuple[str, ThemePage | None]:
     try:
         page = parse_theme_page(text, origin)
     except KBFormatError:
-        return text, None
-    return _under_title(text, f"> Mise à jour le {page.meta.updated_at.isoformat()}"), page
+        return escape_body(text), None
+    date_line = f"> Mise à jour le {page.meta.updated_at.isoformat()}"
+    return _under_title(escape_body(text), date_line), page
 
 
 def _under_title(text: str, line: str) -> str:

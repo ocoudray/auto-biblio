@@ -11,6 +11,7 @@ from auto_biblio.domain.errors import (
     ProviderQuotaError,
     ProviderUnavailableError,
     SiteBuildError,
+    SiteOutputError,
     SourcePayloadError,
     SourceUnavailableError,
 )
@@ -71,3 +72,8 @@ def test_site_build_error_keeps_the_end_of_the_output() -> None:
     assert message.startswith("zensical build failed:")
     assert "line 49" in message
     assert "line 10\n" not in message
+
+
+def test_site_output_error_names_the_directory() -> None:
+    error = SiteOutputError("out", "not a directory")
+    assert str(error) == "cannot build the site into out: not a directory"

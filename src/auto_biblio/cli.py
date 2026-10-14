@@ -16,6 +16,7 @@ from auto_biblio.domain.errors import (
     ConfigError,
     MailDeliveryError,
     SiteBuildError,
+    SiteOutputError,
     TriageRunMissingError,
 )
 from auto_biblio.domain.learning import FixedScoring, build_examples, evaluate_variants
@@ -318,7 +319,7 @@ def create_app(  # noqa: C901, PLR0915 - one nested function per command keeps t
         )
         try:
             plan = stage.run(out)
-        except SiteBuildError as exc:
+        except (SiteBuildError, SiteOutputError) as exc:
             raise _fail(str(exc), EXIT_SITE_FAILED) from exc
         typer.echo(f"site built in {out}: {len(plan.pages)} pages")
         for warning in plan.warnings:

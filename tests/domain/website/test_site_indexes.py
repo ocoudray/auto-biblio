@@ -8,7 +8,6 @@ from auto_biblio.domain.website.indexes import (
     home,
     notes_by_theme,
     notes_index,
-    table_cell,
     weeks_index,
 )
 from auto_biblio.repo_config.profile import Profile
@@ -54,7 +53,6 @@ def test_notes_index_keeps_only_its_kind() -> None:
 def test_titles_with_pipes_and_brackets_stay_valid() -> None:
     page = notes_index("paper", (note("a:1", "A | B [v2]", date(2026, 9, 1)),), LABELS)
     assert "| [A \\| B (v2)](papers/a-1.md) |" in page
-    assert table_cell("x|y[z]") == "x\\|y(z)"
 
 
 def test_notes_by_theme_profile_order_then_unknown_themes() -> None:
@@ -100,3 +98,25 @@ def test_weeks_index_newest_first() -> None:
     page = weeks_index("Digests", ("2026-W41", "2026-W42"))
     assert page == "# Digests\n\n- [2026-W42](2026-W42.md)\n- [2026-W41](2026-W41.md)\n"
     assert weeks_index("Journal", ()) == "# Journal\n\nRien pour l'instant.\n"
+
+
+def test_titles_cannot_inject_html() -> None:
+    page = notes_index(
+        "paper", (note("a:1", "<img src=x onerror=alert(1)>", date(2026, 9, 1)),), LABELS
+    )
+    assert "<img" not in page
+    assert "&lt;img src=x onerror=alert(1)>" in page
+
+
+def test_home_theme_labels_are_safe_link_texts() -> None:
+    profile = Profile.model_validate(
+        {"themes": [{"id": "agentic", "label": "Agents [beta]", "description": "a"}]}
+    )
+    page = home(
+        "V",
+        profile,
+        {ThemeId("agentic"): make_theme_page()},
+        latest_digest=None,
+        latest_changelog=None,
+    )
+    assert "- [Agents (beta)](themes/agentic.md)" in page

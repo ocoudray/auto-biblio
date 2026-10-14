@@ -49,3 +49,25 @@ def test_theme_page_shows_its_update_date() -> None:
 
 def test_unreadable_theme_page_is_kept_verbatim() -> None:
     assert theme_page("oops", "themes/x.md") == ("oops", None)
+
+
+def test_note_body_cannot_inject_html() -> None:
+    note = make_note("a:1")
+    hostile = note.model_copy(
+        update={
+            "content": note.content.model_copy(update={"summary": "x <script>steal()</script>"})
+        }
+    )
+    page, _ = note_page(render_note(hostile), "notes/papers/a-1.md", LABELS)
+    assert "<script>" not in page
+    assert "&lt;script>steal()&lt;/script>" in page
+
+
+def test_theme_page_keeps_its_note_markers_but_not_raw_html() -> None:
+    theme = make_theme_page()
+    hostile = theme.model_copy(
+        update={"content": theme.content.model_copy(update={"overview": "<iframe src=x>"})}
+    )
+    page, _ = theme_page(render_theme_page(hostile) + "<!-- note:a:1 -->\n", "themes/agentic.md")
+    assert "<iframe" not in page
+    assert "<!-- note:a:1 -->" in page
