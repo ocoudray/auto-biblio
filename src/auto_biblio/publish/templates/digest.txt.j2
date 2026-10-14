@@ -13,6 +13,9 @@
 {%- endif %}
 {%- endmacro -%}
 Veille IA — {{ view.week }} ({{ view.count }} contenus)
+{%- if view.online_url %}
+Voir en ligne : {{ view.online_url }}
+{%- endif %}
 {% for section in view.sections %}
 ## {{ section.label }}
 {% for item in section.items %}{{ line(item) }}

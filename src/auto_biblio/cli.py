@@ -315,6 +315,7 @@ def create_app(  # noqa: C901, PLR0915 - one nested function per command keeps t
             clock=clock,
             kb=KBStore.open(root / "kb"),
             analyses=AnalysisStore(state),
+            site_url=config.site.site_url,
         )
         try:
             mail = stage.run(week, dry_run_path=dry_run)

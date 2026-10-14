@@ -6,7 +6,6 @@ from pathlib import Path
 
 from auto_biblio.domain.errors import TriageRunMissingError
 from auto_biblio.domain.ids import ItemId
-from auto_biblio.domain.kb.notes import DeepAnalysis, note_id_for
 from auto_biblio.domain.models import Clock
 from auto_biblio.domain.triage import TriageRun
 from auto_biblio.publish import Mail, MailSender
@@ -14,10 +13,11 @@ from auto_biblio.publish.render import render_digest
 from auto_biblio.publish.view import (
     HealthSummary,
     KBChanges,
+    KBLinks,
     NoteLink,
     build_view,
     kb_changes,
-    kb_url,
+    note_links,
 )
 from auto_biblio.repo_config.profile import Profile
 from auto_biblio.store.analysis import AnalysisStore
@@ -48,6 +48,7 @@ class DigestStage:
         clock: Clock,
         kb: KBStore | None = None,
         analyses: AnalysisStore | None = None,
+        site_url: str | None = None,
     ) -> None:
         """Build the stage.
 
@@ -62,7 +63,9 @@ class DigestStage:
             clock: Current time provider.
             kb: The knowledge base, to link items to their notes.
             analyses: Analysis journals, for the knowledge base changes of the week.
+            site_url: Address of the published site; links go to GitHub without it.
         """
+        self._links = KBLinks(repo=repo, site_url=site_url)
         self._kb = kb
         self._analyses = analyses
         self._triage = triage
@@ -101,6 +104,7 @@ class DigestStage:
             self._repo,
             notes=self._note_links(run),
             changes=self._changes(run.week),
+            online_url=self._links.digest(run.week),
         )
         html, text = render_digest(view)
         mail = Mail(subject=f"Veille IA — {run.week}", html=html, text=text, to=self._to or "")
@@ -116,19 +120,13 @@ class DigestStage:
         return mail
 
     def _note_links(self, run: TriageRun) -> dict[ItemId, NoteLink]:
-        links: dict[ItemId, NoteLink] = {}
         if self._kb is None:
-            return links
-        for scored in run.selected():
-            note = self._kb.get(note_id_for(scored.item_id))
-            url = kb_url(self._repo, note.path) if note else None
-            if note is not None and url is not None:
-                verdict = note.content.verdict if isinstance(note.content, DeepAnalysis) else None
-                links[scored.item_id] = NoteLink(url=url, verdict=verdict)
-        return links
+            return {}
+        notes = {note.meta.id: note for note in self._kb.all_notes()}
+        return note_links(run, notes, self._links)
 
     def _changes(self, week: str) -> KBChanges | None:
         analysis = self._analyses.read(week) if self._analyses else None
         if analysis is None or self._kb is None:
             return None
-        return kb_changes(analysis.changelog, self._kb.note_paths(), self._profile, self._repo)
+        return kb_changes(analysis.changelog, self._kb.note_paths(), self._profile, self._links)
