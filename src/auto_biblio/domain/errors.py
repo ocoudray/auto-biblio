@@ -200,3 +200,21 @@ class ExtractionError(AutoBiblioError):
         """
         self.url = url
         super().__init__(f"{url}: {message}")
+
+
+SITE_OUTPUT_LINES = 20
+"""Lines of the build output kept in a `SiteBuildError`."""
+
+
+class SiteBuildError(AutoBiblioError):
+    """The static site generator failed."""
+
+    def __init__(self, output: str) -> None:
+        """Build the error.
+
+        Args:
+            output: What the generator printed; only its last lines are kept.
+        """
+        self.output = output
+        tail = "\n".join(output.strip().splitlines()[-SITE_OUTPUT_LINES:])
+        super().__init__(f"zensical build failed:\n{tail}")
