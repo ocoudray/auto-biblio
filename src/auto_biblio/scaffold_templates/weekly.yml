@@ -53,6 +53,18 @@ jobs:
         # A failed analysis must not block the digest: it is sent without the new notes.
         continue-on-error: true
         run: auto-biblio analyze $${WEEK:+--week "$$WEEK"}
+      - name: Site build
+        # Like the analysis, the site never blocks the digest.
+        continue-on-error: true
+        run: auto-biblio site build --out site
+      - name: Site deploy
+        if: $${{ !inputs.dry_run }}
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: $${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: $${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy site --project-name=$${{ vars.CLOUDFLARE_PAGES_PROJECT }} --branch=main
       - name: Digest
         run: |
           if [ "$${{ inputs.dry_run }}" = "true" ]; then
@@ -66,6 +78,12 @@ jobs:
         with:
           name: digest
           path: digest.html
+      - name: Keep the dry-run site
+        if: $${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: site
       - name: Commit state
         if: $${{ !cancelled() }}
         run: |

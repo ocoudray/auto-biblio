@@ -79,6 +79,7 @@ auto-biblio triage --week 2026-W41       # re-run a week: cached answers cost no
 auto-biblio analyze                      # notes, theme page and changelog in kb/
 auto-biblio digest --dry-run digest.html # render without mailing
 auto-biblio digest                       # mail the latest triaged week
+auto-biblio site build --out site        # static site of the knowledge base (see Knowledge-base site)
 auto-biblio eval scoring                 # fixed vs learned scoring, on reliable labels
 auto-biblio health                       # fail if no triage ran for alert_after_days
 ```
@@ -88,6 +89,7 @@ auto-biblio health                       # fail if no triage ran for alert_after
 | 1 | Invalid or missing configuration, or no triage for the requested week |
 | 3 | `health`: the weekly triage has not run for too long |
 | 4 | `digest`: the mail could not be sent |
+| 5 | `site build`: the site generator failed |
 
 See [Triage](triage.md) for how items are ranked, and [Upgrade to 0.2](upgrade-0.2.md) to set
 up an existing data repository.

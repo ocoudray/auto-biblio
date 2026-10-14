@@ -60,6 +60,7 @@ and after a second failure the previous page is kept.
 `kb/changelog/YYYY-Www.md` lists the notes created, deepened or rewritten, the theme page
 rewritten, and the links added or removed. The digest shows the same changes under
 *Évolutions de la base*, links each item to its note, and shows the verdict of deep analyses.
+With a [site](site.md), these links open the note on the site instead of GitHub.
 
 ## Reliability
 
