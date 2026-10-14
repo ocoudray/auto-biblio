@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime
 from auto_biblio.domain.features import FeatureVector, ThemeId
 from auto_biblio.domain.ids import ItemId, ItemKind
 from auto_biblio.domain.kb.notes import DeepAnalysis, Note, NoteMeta, ShortNote
+from auto_biblio.domain.kb.pages import ThemePage, ThemePageContent, ThemePageMeta
 from auto_biblio.domain.models import Item, Sighting, Signal, SignalKind, SourceType
 from auto_biblio.domain.triage import ScoredItem, ScoringReport, TriageRun, TriageVerdict
 
@@ -152,3 +153,28 @@ def make_note(  # noqa: PLR0913 - builder mirrors the note's main fields
         }
     )
     return Note(meta=meta, content=content, my_notes=my_notes)
+
+
+def make_theme_page(
+    theme: str = "agentic", *, notes: tuple[str, ...] = (), updated_at: date = date(2026, 10, 13)
+) -> ThemePage:
+    """Build a theme page citing the given notes."""
+    content = ThemePageContent(
+        overview="State of the art.",
+        key_concepts=("Tool use",),
+        dominant_approaches=("ReAct",),
+        reference_tools=(),
+        open_questions=("Evaluation?",),
+        further_reading=(),
+    )
+    meta = ThemePageMeta.model_validate(
+        {
+            "theme": theme,
+            "label": theme.title(),
+            "updated_at": updated_at,
+            "prompt_version": "theme_page_v1",
+            "model_id": "m",
+            "notes": list(notes),
+        }
+    )
+    return ThemePage(meta=meta, content=content)
