@@ -130,12 +130,16 @@ def markdown_view() -> DigestView:
                 ThemeSection(
                     label="Agents",
                     items=(
-                        item("Durable | Agents", note_url="../notes/papers/x.md", verdict="À lire."),
+                        item(
+                            "Durable | Agents", note_url="../notes/papers/x.md", verdict="À lire."
+                        ),
                     ),
                 ),
             ),
             "kb_changes": KBChanges(
-                notes=(KBChange(title="Durable", change="nouvelle fiche", url="../notes/papers/x.md"),),
+                notes=(
+                    KBChange(title="Durable", change="nouvelle fiche", url="../notes/papers/x.md"),
+                ),
             ),
         }
     )
