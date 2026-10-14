@@ -93,6 +93,19 @@ class KBStore:
         """
         return {note_id: note.path for note_id, note in self._notes.items()}
 
+    def files(self) -> dict[PurePosixPath, str]:
+        """Return the content of every page source of the knowledge base.
+
+        Returns:
+            The notes, theme pages and changelogs, by path relative to `kb/`.
+        """
+        found: dict[PurePosixPath, str] = {}
+        for pattern in ("notes/*/*.md", "themes/*.md", "changelog/*.md"):
+            for path in sorted(self._root.glob(pattern)):
+                relative = PurePosixPath(path.relative_to(self._root).as_posix())
+                found[relative] = path.read_text(encoding="utf-8")
+        return found
+
     def write_note(self, note: Note) -> Path:
         """Write a note.
 

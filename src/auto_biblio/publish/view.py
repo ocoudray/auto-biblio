@@ -268,7 +268,7 @@ def build_view(  # noqa: PLR0913 - the digest combines every weekly output
 
     Args:
         run: The weekly journal.
-        items: The items of the run, by id.
+        items: The items of the run, by id; a selected item missing here is skipped.
         profile: The interest profile (theme labels and order).
         health: Pipeline health.
         repo: `owner/repo` of the data repository, for the feedback links (none without).
@@ -283,7 +283,10 @@ def build_view(  # noqa: PLR0913 - the digest combines every weekly output
     by_theme: defaultdict[ThemeId | None, list[DigestItem]] = defaultdict(list)
     discoveries: list[DigestItem] = []
     for scored in run.selected():
-        line = _line(scored, items[scored.item_id], run.week, repo, links.get(scored.item_id))
+        item = items.get(scored.item_id)
+        if item is None:  # dropped from the store since: nothing left to show
+            continue
+        line = _line(scored, item, run.week, repo, links.get(scored.item_id))
         if scored.slot == "discovery":
             discoveries.append(line)
         else:

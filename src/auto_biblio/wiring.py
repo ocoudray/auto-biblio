@@ -26,8 +26,10 @@ from auto_biblio.publish.smtp import SmtpMailSender
 from auto_biblio.repo_config.llm import LLMConfig, ModelSpec
 from auto_biblio.repo_config.loader import LLM_PATH
 from auto_biblio.sources._http import Throttle
+from auto_biblio.stages.site import SiteBuilderPort
 from auto_biblio.stages.triage import LLMFactory
 from auto_biblio.store.llm_cache import LLMCacheStore
+from auto_biblio.website.builder import SiteBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +138,7 @@ class Services:
     model_runner: Callable[[Settings], ModelRunner]
     mail_sender: Callable[[Settings], MailSender | None]
     extractor: Callable[[Settings, httpx.Client, Path], TextExtractor]
+    site_builder: Callable[[], SiteBuilderPort]
 
 
 def _real_embedder(_settings: Settings) -> Embedder:  # pragma: no cover - loads the model
@@ -188,4 +191,5 @@ REAL_SERVICES = Services(
     model_runner=_real_runner,
     mail_sender=real_mail_sender,
     extractor=real_extractor,
+    site_builder=SiteBuilder,
 )

@@ -12,7 +12,12 @@ import typer
 
 from auto_biblio import __version__
 from auto_biblio.config import Settings
-from auto_biblio.domain.errors import ConfigError, MailDeliveryError, TriageRunMissingError
+from auto_biblio.domain.errors import (
+    ConfigError,
+    MailDeliveryError,
+    SiteBuildError,
+    TriageRunMissingError,
+)
 from auto_biblio.domain.learning import FixedScoring, build_examples, evaluate_variants
 from auto_biblio.domain.models import Clock
 from auto_biblio.embeddings.cache import CachedEmbedder
@@ -29,6 +34,7 @@ from auto_biblio.stages.collect import CollectStage
 from auto_biblio.stages.digest import DigestStage
 from auto_biblio.stages.feedback import FeedbackStage
 from auto_biblio.stages.refresh import SignalRefreshStage
+from auto_biblio.stages.site import SiteStage
 from auto_biblio.stages.triage import TriageStage
 from auto_biblio.store.analysis import AnalysisStore
 from auto_biblio.store.cursors import CursorStore
@@ -46,6 +52,7 @@ EXIT_CONFIG_ERROR = 1
 EXIT_ALL_SOURCES_FAILED = 2
 EXIT_HEALTH_ALERT = 3
 EXIT_MAIL_FAILED = 4
+EXIT_SITE_FAILED = 5
 HF_INTERVAL_S = 0.5
 FULLTEXT_CACHE = Path(".cache/fulltext")
 WEEK_PATTERN = re.compile(r"^\d{4}-W\d{2}$")
@@ -127,7 +134,9 @@ def create_app(  # noqa: C901, PLR0915 - one nested function per command keeps t
     eval_app = typer.Typer(no_args_is_help=True, help="Evaluation of the triage.")
     app.add_typer(signals_app, name="signals")
     app.add_typer(feedback_app, name="feedback")
+    site_app = typer.Typer(no_args_is_help=True, help="Knowledge-base site.")
     app.add_typer(eval_app, name="eval")
+    app.add_typer(site_app, name="site")
     settings = Settings()
 
     @app.callback()
@@ -287,6 +296,33 @@ def create_app(  # noqa: C901, PLR0915 - one nested function per command keeps t
         typer.echo(f"{run.week}: {changed} notes written, theme page: {run.theme or 'none'}")
         for degradation in run.degradations:
             typer.echo(f"degraded: {degradation}")
+
+    @site_app.command("build")
+    def site_build(
+        data_dir: DataDirOption = None,
+        out: Annotated[Path, typer.Option("--out", help="Directory of the built site.")] = Path(
+            "site"
+        ),
+    ) -> None:
+        """Build the knowledge-base site: themes, notes, changelog and archived digests."""
+        root = data_dir or settings.data_dir
+        config = _load_config(root)
+        state = root / "state"
+        stage = SiteStage(
+            config,
+            KBStore.open(root / "kb"),
+            TriageStore(state),
+            ItemStore.open(state),
+            AnalysisStore(state),
+            builder=services.site_builder(),
+        )
+        try:
+            plan = stage.run(out)
+        except SiteBuildError as exc:
+            raise _fail(str(exc), EXIT_SITE_FAILED) from exc
+        typer.echo(f"site built in {out}: {len(plan.pages)} pages")
+        for warning in plan.warnings:
+            typer.echo(f"warning: {warning}")
 
     @app.command()
     def digest(

@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from importlib.metadata import entry_points
 from pathlib import Path
@@ -11,7 +12,7 @@ from typer.testing import CliRunner
 
 from auto_biblio.cli import create_app, main
 from auto_biblio.config import Settings
-from auto_biblio.domain.errors import MailDeliveryError, SourceUnavailableError
+from auto_biblio.domain.errors import MailDeliveryError, SiteBuildError, SourceUnavailableError
 from auto_biblio.domain.models import Clock, Item, SourceBatch
 from auto_biblio.extract import ExtractedText
 from auto_biblio.publish import Mail
@@ -19,6 +20,7 @@ from auto_biblio.repo_config.loader import RepoConfig
 from auto_biblio.sources import Source, SourceFactory
 from auto_biblio.store.items import ItemStore
 from auto_biblio.store.triage import TriageStore
+from auto_biblio.website.builder import SiteBuilder
 from auto_biblio.wiring import Services
 
 runner = CliRunner()
@@ -169,6 +171,7 @@ def services(outbox: Outbox | None = None) -> Services:
         model_runner=lambda _s: PipelineRunner(),
         mail_sender=lambda _s: outbox,
         extractor=lambda _s, _c, _d: FullText(),
+        site_builder=SiteBuilder,
     )
 
 
@@ -328,3 +331,31 @@ def test_analyze_needs_roles(triage_dir: Path) -> None:
     result = runner.invoke(app_with(), ["analyze", "--data-dir", str(triage_dir)])
     assert result.exit_code == 1
     assert "short_note" in result.stderr
+
+
+def test_site_build_command(triage_dir: Path, tmp_path: Path) -> None:
+    runner.invoke(app_with(), ["triage", "--data-dir", str(triage_dir)])
+    runner.invoke(app_with(), ["analyze", "--data-dir", str(triage_dir)])
+    out = tmp_path / "site"
+    result = runner.invoke(
+        app_with(), ["site", "build", "--data-dir", str(triage_dir), "--out", str(out)]
+    )
+    assert result.exit_code == 0, result.output
+    assert f"site built in {out}" in result.output
+    assert (out / "index.html").exists()
+    assert list((out / "digests").glob("*/index.html"))
+
+
+class BrokenBuilder:
+    def build(self, *_args: object) -> None:
+        raise SiteBuildError("boom")
+
+
+def test_site_build_failure(triage_dir: Path, tmp_path: Path) -> None:
+    broken = replace(services(), site_builder=BrokenBuilder)
+    app = create_app(factory_of(), clock=lambda: NOW, services=broken, http_client=offline)
+    result = runner.invoke(
+        app, ["site", "build", "--data-dir", str(triage_dir), "--out", str(tmp_path / "s")]
+    )
+    assert result.exit_code == 5
+    assert "zensical build failed" in result.stderr

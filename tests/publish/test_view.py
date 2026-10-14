@@ -220,3 +220,11 @@ def test_view_carries_the_online_url() -> None:
     view = build_view(run, items, PROFILE, HealthSummary(), None, online_url="https://v/x/")
     assert view.online_url == "https://v/x/"
     assert build_view(run, items, PROFILE, HealthSummary(), None).online_url is None
+
+
+def test_view_skips_items_missing_from_the_store() -> None:
+    run = make_run("2026-W41", (scored("a:1", "agentic", 0.9), scored("a:2", "agentic", 0.8)))
+    view = build_view(
+        run, {ItemId("a:1"): make_item(item_id="a:1")}, PROFILE, HealthSummary(), None
+    )
+    assert view.count == 1
