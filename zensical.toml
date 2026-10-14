@@ -20,6 +20,7 @@ nav = [
     { "Analysis & KB spec" = "superpowers/specs/2026-10-10-analyse-kb-design.md" },
     { "Analysis & KB plan" = "superpowers/plans/2026-10-10-analyse-kb.md" },
     { "Site spec" = "superpowers/specs/2026-10-14-site-design.md" },
+    { "Site plan" = "superpowers/plans/2026-10-14-site.md" },
   ] },
   { "Reference" = "reference/index.md" },
   { "Coverage" = "coverage.md" },
