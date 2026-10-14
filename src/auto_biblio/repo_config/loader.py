@@ -9,6 +9,7 @@ from auto_biblio.domain.errors import ConfigError
 from auto_biblio.repo_config.analysis import AnalysisConfig
 from auto_biblio.repo_config.llm import LLMConfig
 from auto_biblio.repo_config.profile import Profile
+from auto_biblio.repo_config.site import SiteConfig
 from auto_biblio.repo_config.sources import SourcesConfig
 from auto_biblio.repo_config.triage import TriageConfig
 
@@ -17,6 +18,7 @@ SOURCES_PATH = Path("config/sources.yaml")
 LLM_PATH = Path("config/llm.yaml")
 TRIAGE_PATH = Path("config/triage.yaml")
 ANALYSIS_PATH = Path("config/analysis.yaml")
+SITE_PATH = Path("config/site.yaml")
 
 
 class RepoConfig(BaseModel):
@@ -28,6 +30,7 @@ class RepoConfig(BaseModel):
     sources: SourcesConfig
     triage: TriageConfig = TriageConfig()
     analysis: AnalysisConfig = AnalysisConfig()
+    site: SiteConfig = SiteConfig()
     llm: LLMConfig | None = None
     """Absent until the repository is set up for triage; collection does not need it."""
 
@@ -48,8 +51,8 @@ class RepoConfig(BaseModel):
 def load_repo_config(data_dir: Path) -> RepoConfig:
     """Load and validate every configuration file of a data repository.
 
-    `triage.yaml` and `analysis.yaml` are optional (defaults apply), and so is `llm.yaml`
-    (only the LLM steps need it).
+    `triage.yaml`, `analysis.yaml` and `site.yaml` are optional (defaults apply), and so is
+    `llm.yaml` (only the LLM steps need it).
 
     Args:
         data_dir: Root of the data repository.
@@ -63,6 +66,7 @@ def load_repo_config(data_dir: Path) -> RepoConfig:
     triage_present = (data_dir / TRIAGE_PATH).exists()
     analysis_present = (data_dir / ANALYSIS_PATH).exists()
     llm_present = (data_dir / LLM_PATH).exists()
+    site_present = (data_dir / SITE_PATH).exists()
     return RepoConfig(
         profile=_load(data_dir, PROFILE_PATH, Profile),
         sources=_load(data_dir, SOURCES_PATH, SourcesConfig),
@@ -70,6 +74,7 @@ def load_repo_config(data_dir: Path) -> RepoConfig:
         analysis=(
             _load(data_dir, ANALYSIS_PATH, AnalysisConfig) if analysis_present else AnalysisConfig()
         ),
+        site=_load(data_dir, SITE_PATH, SiteConfig) if site_present else SiteConfig(),
         llm=_load(data_dir, LLM_PATH, LLMConfig) if llm_present else None,
     )
 
@@ -82,7 +87,7 @@ def _load[ModelT: BaseModel](data_dir: Path, relative: Path, model: type[ModelT]
         raise ConfigError(shown, None, f"cannot read file ({exc.strerror})") from exc
     except yaml.YAMLError as exc:
         raise ConfigError(shown, None, f"invalid YAML ({exc})") from exc
-    if raw is None and model in {TriageConfig, AnalysisConfig}:
+    if raw is None and model in {TriageConfig, AnalysisConfig, SiteConfig}:
         raw = {}  # an empty optional file means "all defaults"
     try:
         return model.model_validate(raw)
