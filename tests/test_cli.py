@@ -348,7 +348,8 @@ def test_site_build_command(triage_dir: Path, tmp_path: Path) -> None:
 
 class BrokenBuilder:
     def build(self, *_args: object) -> None:
-        raise SiteBuildError("boom")
+        output = "boom"
+        raise SiteBuildError(output)
 
 
 def test_site_build_failure(triage_dir: Path, tmp_path: Path) -> None:
