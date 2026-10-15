@@ -1,7 +1,7 @@
 from datetime import timedelta
 from pathlib import PurePosixPath
 
-from builders import NOW, make_features, make_item, make_run, make_verdict
+from builders import NOW, make_features, make_item, make_note, make_run, make_verdict
 
 from auto_biblio.domain.features import ThemeId
 from auto_biblio.domain.ids import ItemId
@@ -9,7 +9,14 @@ from auto_biblio.domain.kb.changelog import ChangelogEntry, NoteChange
 from auto_biblio.domain.kb.pages import RemovedLink
 from auto_biblio.domain.run_report import RunReport, SourceReport, SourceStatus
 from auto_biblio.domain.triage import ScoredItem, ScoringReport
-from auto_biblio.publish.view import HealthSummary, NoteLink, build_view, kb_changes
+from auto_biblio.publish.view import (
+    HealthSummary,
+    KBLinks,
+    NoteLink,
+    build_view,
+    kb_changes,
+    note_links,
+)
 from auto_biblio.repo_config.profile import Profile
 
 PROFILE = Profile.model_validate(
@@ -161,7 +168,10 @@ def test_kb_changes_section() -> None:
         links_removed=(RemovedLink(url="https://old", reason="Dead."),),
     )
     changes = kb_changes(
-        entry, {ItemId("a:1"): PurePosixPath("notes/papers/a-1.md")}, PROFILE, "me/data"
+        entry,
+        {ItemId("a:1"): PurePosixPath("notes/papers/a-1.md")},
+        PROFILE,
+        KBLinks(repo="me/data"),
     )
     assert [(c.title, c.change, c.url) for c in changes.notes] == [
         ("T", "fiche approfondie", "https://github.com/me/data/blob/main/kb/notes/papers/a-1.md"),
@@ -171,4 +181,50 @@ def test_kb_changes_section() -> None:
     assert changes.theme_url == "https://github.com/me/data/blob/main/kb/themes/agentic.md"
     assert changes.links_removed == ("https://old : Dead.",)
     assert not changes.is_empty
-    assert kb_changes(ChangelogEntry(week="w"), {}, PROFILE, None).theme_url is None
+    assert kb_changes(ChangelogEntry(week="w"), {}, PROFILE, KBLinks()).theme_url is None
+
+
+def test_kb_links_point_to_the_site() -> None:
+    links = KBLinks(repo="o/d", site_url="https://v.pages.dev/")
+    assert links.page(PurePosixPath("notes/papers/x.md")) == "https://v.pages.dev/notes/papers/x/"
+    assert links.digest("2026-W42") == "https://v.pages.dev/digests/2026-W42/"
+
+
+def test_kb_links_fall_back_to_github() -> None:
+    links = KBLinks(repo="o/d")
+    assert (
+        links.page(PurePosixPath("themes/a.md"))
+        == "https://github.com/o/d/blob/main/kb/themes/a.md"
+    )
+    assert links.digest("2026-W42") is None
+    assert KBLinks().page(PurePosixPath("themes/a.md")) is None
+
+
+def test_kb_links_relative_markdown() -> None:
+    links = KBLinks(relative_to="../", site_url="https://v.pages.dev/")
+    assert links.page(PurePosixPath("notes/tools/y.md")) == "../notes/tools/y.md"
+
+
+def test_note_links_use_the_links() -> None:
+    run = make_run("2026-W41", (scored("a:1", "agentic", 0.9),))
+    note = make_note("a:1", depth="deep")
+    links = note_links(run, {note.meta.id: note}, KBLinks(site_url="https://v.pages.dev/"))
+    assert links[ItemId("a:1")].url.startswith("https://v.pages.dev/notes/papers/")
+    assert links[ItemId("a:1")].verdict is not None
+    assert note_links(run, {}, KBLinks(site_url="https://v.pages.dev/")) == {}
+
+
+def test_view_carries_the_online_url() -> None:
+    run = make_run("2026-W41", (scored("a:1", "agentic", 0.9),))
+    items = {ItemId("a:1"): make_item(item_id="a:1")}
+    view = build_view(run, items, PROFILE, HealthSummary(), None, online_url="https://v/x/")
+    assert view.online_url == "https://v/x/"
+    assert build_view(run, items, PROFILE, HealthSummary(), None).online_url is None
+
+
+def test_view_skips_items_missing_from_the_store() -> None:
+    run = make_run("2026-W41", (scored("a:1", "agentic", 0.9), scored("a:2", "agentic", 0.8)))
+    view = build_view(
+        run, {ItemId("a:1"): make_item(item_id="a:1")}, PROFILE, HealthSummary(), None
+    )
+    assert view.count == 1

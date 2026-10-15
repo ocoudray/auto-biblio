@@ -1,0 +1,33 @@
+{%- macro line(item) %}
+- [{{ item.title|md }}]({{ item.url }}){% if item.revenant %} *revient au goût du jour*{% endif %}{% if item.unverified %} *non vérifié*{% endif %}{% if item.note_url %} · [fiche]({{ item.note_url }}){% endif %}
+  {{ item.sources|md }}{% if item.item_type %} · {{ item.item_type|md }}{% endif %}
+{%- if item.reason %}<br>
+  {{ item.reason|md }}
+{%- endif %}
+{%- if item.verdict %}<br>
+  Analyse : {{ item.verdict|md }}
+{%- endif %}
+{%- endmacro -%}
+# Digest — {{ view.week }}
+
+{{ view.count }} contenus retenus.
+{% for section in view.sections %}
+## {{ section.label|md }}
+{% for item in section.items %}{{ line(item) }}{% endfor %}
+{% endfor %}
+{%- if view.discoveries %}
+## Découvertes
+{% for item in view.discoveries %}{{ line(item) }}{% endfor %}
+{% endif %}
+{%- if not view.kb_changes.is_empty %}
+## Évolutions de la base
+{% for change in view.kb_changes.notes %}
+- {% if change.url %}[{{ change.title|md }}]({{ change.url }}){% else %}{{ change.title|md }}{% endif %} : {{ change.change }}
+{%- endfor %}
+{%- if view.kb_changes.theme %}
+- Page thème {% if view.kb_changes.theme_url %}[{{ view.kb_changes.theme|md }}]({{ view.kb_changes.theme_url }}){% else %}{{ view.kb_changes.theme|md }}{% endif %} réécrite
+{%- endif %}
+{%- for removed in view.kb_changes.links_removed %}
+- Lien retiré : {{ removed|md }}
+{%- endfor %}
+{% endif %}

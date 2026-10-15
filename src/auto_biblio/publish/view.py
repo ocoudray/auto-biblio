@@ -10,6 +10,7 @@ from auto_biblio.domain.features import ThemeId
 from auto_biblio.domain.feedback import feedback_issue_url
 from auto_biblio.domain.ids import ItemId
 from auto_biblio.domain.kb.changelog import ChangelogEntry
+from auto_biblio.domain.kb.notes import DeepAnalysis, Note, note_id_for
 from auto_biblio.domain.models import Item
 from auto_biblio.domain.run_report import RunReport
 from auto_biblio.domain.triage import ScoredItem, TriageRun
@@ -133,11 +134,72 @@ def kb_url(repo: str | None, path: PurePosixPath) -> str | None:
     return f"https://github.com/{repo}/blob/main/kb/{path}" if repo else None
 
 
+class KBLinks(_Frozen):
+    """Where the digest's links to the knowledge base point."""
+
+    repo: str | None = None
+    """`owner/repo` of the data repository: links go to GitHub when there is no site."""
+    site_url: str | None = None
+    """Address of the published site, with a trailing slash."""
+    relative_to: str | None = None
+    """Prefix of relative Markdown links, for pages of the site itself (e.g. `../`)."""
+
+    def page(self, path: PurePosixPath) -> str | None:
+        """Link to a page of the knowledge base.
+
+        Args:
+            path: The file, relative to `kb/`.
+
+        Returns:
+            A relative Markdown link, a site address or a GitHub address, in that order of
+            preference; None when none can be built.
+        """
+        if self.relative_to is not None:
+            return f"{self.relative_to}{path}"
+        if self.site_url is not None:
+            return f"{self.site_url}{path.with_suffix('').as_posix()}/"
+        return kb_url(self.repo, path)
+
+    def digest(self, week: str) -> str | None:
+        """Address of the archived digest of a week on the site.
+
+        Args:
+            week: ISO week.
+
+        Returns:
+            The address, or None without site.
+        """
+        return f"{self.site_url}digests/{week}/" if self.site_url is not None else None
+
+
+def note_links(
+    run: TriageRun, notes: Mapping[ItemId, Note], links: KBLinks
+) -> dict[ItemId, NoteLink]:
+    """Link each selected item of a run to its note, when it has one.
+
+    Args:
+        run: The weekly journal.
+        notes: The notes of the knowledge base, by id.
+        links: Where links point.
+
+    Returns:
+        The note link of each item that has a note.
+    """
+    found: dict[ItemId, NoteLink] = {}
+    for scored in run.selected():
+        note = notes.get(note_id_for(scored.item_id))
+        url = links.page(note.path) if note is not None else None
+        if note is not None and url is not None:
+            verdict = note.content.verdict if isinstance(note.content, DeepAnalysis) else None
+            found[scored.item_id] = NoteLink(url=url, verdict=verdict)
+    return found
+
+
 def kb_changes(
     entry: ChangelogEntry,
     note_paths: Mapping[ItemId, PurePosixPath],
     profile: Profile,
-    repo: str | None,
+    links: KBLinks,
 ) -> KBChanges:
     """Turn the week's changelog into the digest section.
 
@@ -145,7 +207,7 @@ def kb_changes(
         entry: The changelog of the week.
         note_paths: Location of each note.
         profile: The interest profile (theme labels).
-        repo: `owner/repo` of the data repository.
+        links: Where links point.
 
     Returns:
         The section.
@@ -155,7 +217,7 @@ def kb_changes(
         KBChange(
             title=change.title,
             change=_CHANGE_LABEL[change.change],
-            url=kb_url(repo, path) if (path := note_paths.get(change.note_id)) else None,
+            url=links.page(path) if (path := note_paths.get(change.note_id)) else None,
         )
         for change in entry.notes
     )
@@ -163,7 +225,7 @@ def kb_changes(
     return KBChanges(
         notes=notes,
         theme=labels.get(entry.theme, entry.theme) if entry.theme else None,
-        theme_url=kb_url(repo, theme_path) if entry.theme else None,
+        theme_url=links.page(theme_path) if entry.theme else None,
         links_removed=tuple(f"{r.url} : {r.reason}" for r in entry.links_removed),
     )
 
@@ -182,6 +244,8 @@ class DigestView(_Frozen):
     tokens: int
     degradations: tuple[str, ...]
     kb_changes: KBChanges = KBChanges()
+    online_url: str | None = None
+    """Address of this digest on the site, when there is one."""
 
     @property
     def count(self) -> int:
@@ -198,17 +262,19 @@ def build_view(  # noqa: PLR0913 - the digest combines every weekly output
     *,
     notes: Mapping[ItemId, NoteLink] | None = None,
     changes: KBChanges | None = None,
+    online_url: str | None = None,
 ) -> DigestView:
     """Assemble the digest of a triage run.
 
     Args:
         run: The weekly journal.
-        items: The items of the run, by id.
+        items: The items of the run, by id; a selected item missing here is skipped.
         profile: The interest profile (theme labels and order).
         health: Pipeline health.
         repo: `owner/repo` of the data repository, for the feedback links (none without).
         notes: The note of each item that has one.
         changes: The knowledge base changes of the week.
+        online_url: Address of this digest on the site.
 
     Returns:
         The view.
@@ -217,7 +283,10 @@ def build_view(  # noqa: PLR0913 - the digest combines every weekly output
     by_theme: defaultdict[ThemeId | None, list[DigestItem]] = defaultdict(list)
     discoveries: list[DigestItem] = []
     for scored in run.selected():
-        line = _line(scored, items[scored.item_id], run.week, repo, links.get(scored.item_id))
+        item = items.get(scored.item_id)
+        if item is None:  # dropped from the store since: nothing left to show
+            continue
+        line = _line(scored, item, run.week, repo, links.get(scored.item_id))
         if scored.slot == "discovery":
             discoveries.append(line)
         else:
@@ -244,6 +313,7 @@ def build_view(  # noqa: PLR0913 - the digest combines every weekly output
         tokens=tokens,
         degradations=run.degradations,
         kb_changes=changes or KBChanges(),
+        online_url=online_url,
     )
 
 

@@ -1,5 +1,5 @@
 from datetime import UTC, date, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 from builders import make_note
@@ -95,3 +95,19 @@ def test_analysis_store(tmp_path: Path) -> None:
     )
     assert store.write(run) == tmp_path / "analysis" / "2026-W41.json"
     assert store.read("2026-W41") == run
+
+
+def test_files_returns_every_page_source(tmp_path: Path) -> None:
+    store = KBStore.open(tmp_path)
+    store.write_note(make_note("arxiv:1"))
+    (tmp_path / "themes").mkdir()
+    (tmp_path / "themes" / "agentic.md").write_text("theme")
+    store.write_changelog(ChangelogEntry(week="2026-W42"))
+    (tmp_path / ".gitkeep").write_text("")
+    files = store.files()
+    assert sorted(str(p) for p in files) == [
+        "changelog/2026-W42.md",
+        "notes/papers/arxiv-1.md",
+        "themes/agentic.md",
+    ]
+    assert files[PurePosixPath("themes/agentic.md")] == "theme"

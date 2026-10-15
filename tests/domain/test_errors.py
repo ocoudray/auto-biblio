@@ -10,6 +10,8 @@ from auto_biblio.domain.errors import (
     MailDeliveryError,
     ProviderQuotaError,
     ProviderUnavailableError,
+    SiteBuildError,
+    SiteOutputError,
     SourcePayloadError,
     SourceUnavailableError,
 )
@@ -62,3 +64,16 @@ def test_simple_errors() -> None:
     assert FeedbackParseError("issue#3", "x").origin == "issue#3"
     assert str(EmbeddingError("no model")) == "no model"
     assert str(MailDeliveryError("smtp down")) == "smtp down"
+
+
+def test_site_build_error_keeps_the_end_of_the_output() -> None:
+    output = "\n".join(f"line {i}" for i in range(50))
+    message = str(SiteBuildError(output))
+    assert message.startswith("zensical build failed:")
+    assert "line 49" in message
+    assert "line 10\n" not in message
+
+
+def test_site_output_error_names_the_directory() -> None:
+    error = SiteOutputError("out", "not a directory")
+    assert str(error) == "cannot build the site into out: not a directory"

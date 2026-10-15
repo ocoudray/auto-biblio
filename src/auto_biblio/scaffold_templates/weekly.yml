@@ -53,6 +53,20 @@ jobs:
         # A failed analysis must not block the digest: it is sent without the new notes.
         continue-on-error: true
         run: auto-biblio analyze $${WEEK:+--week "$$WEEK"}
+      - name: Site build
+        id: site_build
+        # Like the analysis, the site never blocks the digest; a failure is reported at the end.
+        continue-on-error: true
+        run: auto-biblio site build --out site
+      - name: Site deploy
+        id: site_deploy
+        if: $${{ !inputs.dry_run }}
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: $${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: $${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy site --project-name=$${{ vars.CLOUDFLARE_PAGES_PROJECT }} --branch=main
       - name: Digest
         run: |
           if [ "$${{ inputs.dry_run }}" = "true" ]; then
@@ -66,6 +80,12 @@ jobs:
         with:
           name: digest
           path: digest.html
+      - name: Keep the dry-run site
+        if: $${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: site
       - name: Commit state
         if: $${{ !cancelled() }}
         run: |
@@ -76,3 +96,10 @@ jobs:
             git commit -m "triage: $$(date -u +%G-W%V)"
             git push
           fi
+      - name: Report a site failure
+        # continue-on-error keeps the run green: fail it here, once the digest is sent and the
+        # state committed, so that GitHub notifies the failure.
+        if: $${{ steps.site_build.outcome == 'failure' || steps.site_deploy.outcome == 'failure' }}
+        run: |
+          echo "::error::the site was not built or not deployed: links of this digest may be dead"
+          exit 1

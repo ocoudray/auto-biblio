@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from auto_biblio.publish.render import render_digest
+from auto_biblio.publish.render import render_digest, render_digest_markdown
 from auto_biblio.publish.view import (
     DigestItem,
     DigestView,
@@ -108,3 +108,74 @@ def test_render_kb_changes_and_note_links() -> None:
     assert "## Évolutions de la base" in text
     assert "Fiche : https://kb/x.md" in text
     assert "- Lien retiré : https://old : Dead." in text
+
+
+def test_online_link_when_the_site_is_set() -> None:
+    html, text = render_digest(view().model_copy(update={"online_url": "https://v/digests/w/"}))
+    assert "Voir en ligne" in html
+    assert 'href="https://v/digests/w/"' in html
+    assert "Voir en ligne : https://v/digests/w/" in text
+
+
+def test_no_online_link_without_site() -> None:
+    html, text = render_digest(view())
+    assert "Voir en ligne" not in html
+    assert "Voir en ligne" not in text
+
+
+def markdown_view() -> DigestView:
+    return view().model_copy(
+        update={
+            "sections": (
+                ThemeSection(
+                    label="Agents",
+                    items=(
+                        item(
+                            "Durable | Agents", note_url="../notes/papers/x.md", verdict="À lire."
+                        ),
+                    ),
+                ),
+            ),
+            "kb_changes": KBChanges(
+                notes=(
+                    KBChange(title="Durable", change="nouvelle fiche", url="../notes/papers/x.md"),
+                ),
+            ),
+        }
+    )
+
+
+def test_markdown_digest_lists_items_and_notes() -> None:
+    page = render_digest_markdown(markdown_view())
+    assert page.startswith("# Digest — 2026-W41\n")
+    assert "## Agents" in page
+    assert "[Durable \\| Agents](https://arxiv.org/abs/2410.12345)" in page
+    assert "[fiche](../notes/papers/x.md)" in page
+    assert "Analyse : À lire." in page
+    assert "## Découvertes" in page
+    assert "## Évolutions de la base" in page
+    assert "- [Durable](../notes/papers/x.md) : nouvelle fiche" in page
+
+
+def test_markdown_digest_has_no_feedback_nor_health() -> None:
+    page = render_digest_markdown(markdown_view())
+    assert "issues/new" not in page
+    assert "import-ai" not in page
+    assert "tokens" not in page
+
+
+def test_markdown_digest_escapes_titles() -> None:
+    hostile = markdown_view().model_copy(
+        update={
+            "sections": (
+                ThemeSection(
+                    label="Agents",
+                    items=(item("Foo] (bar <img src=x>", reason="<b>bold</b>"),),
+                ),
+            )
+        }
+    )
+    page = render_digest_markdown(hostile)
+    assert "[Foo) (bar &lt;img src=x>](https://arxiv.org/abs/2410.12345)" in page
+    assert "<img" not in page
+    assert "<b>" not in page

@@ -96,7 +96,7 @@ def test_sending_needs_sender_and_recipient(tmp_path: Path) -> None:
         stage(tmp_path, Outbox(), to=None).run()
 
 
-def with_kb(tmp_path: Path, *, analysis: bool) -> DigestStage:
+def with_kb(tmp_path: Path, *, analysis: bool, site_url: str | None = None) -> DigestStage:
     stage(tmp_path, Outbox())  # seeds the items and the triage journal
     kb = KBStore.open(tmp_path / "kb")
     kb.write_note(make_note("arxiv:2410.12345", depth="deep"))
@@ -136,6 +136,7 @@ def with_kb(tmp_path: Path, *, analysis: bool) -> DigestStage:
         clock=lambda: NOW,
         kb=kb,
         analyses=analyses,
+        site_url=site_url,
     )
 
 
@@ -151,3 +152,15 @@ def test_digest_without_analysis_run(tmp_path: Path) -> None:
     mail = with_kb(tmp_path, analysis=False).run()
     assert "kb/notes/papers/arxiv-2410.12345.md" in mail.html  # notes of earlier weeks still linked
     assert "Évolutions de la base" not in mail.html
+
+
+def test_digest_links_to_the_site(tmp_path: Path) -> None:
+    mail = with_kb(tmp_path, analysis=True, site_url="https://v.pages.dev/").run()
+    assert "https://v.pages.dev/notes/papers/arxiv-2410.12345/" in mail.html
+    assert "github.com/me/data/blob" not in mail.html
+    assert "https://v.pages.dev/digests/2026-W41/" in mail.html
+    assert "Voir en ligne" in mail.html
+
+
+def test_digest_without_site_has_no_online_link(tmp_path: Path) -> None:
+    assert "Voir en ligne" not in with_kb(tmp_path, analysis=True).run().html

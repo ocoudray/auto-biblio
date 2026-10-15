@@ -1,6 +1,6 @@
 [project]
 name = "auto-biblio"
-version = "0.5.0"
+version = "0.6.0"
 description = "Routine to fetch automatically new research and development on AI, and give a recap of the most relevant advances"
 readme = "README.md"
 authors = [{ name = "Olivier COUDRAY", email = "olivier.coudray.15@polytechnique.org" }]
@@ -19,6 +19,7 @@ dependencies = [
     "scikit-learn>=1.9.1",
     "trafilatura>=2.3.1",
     "typer>=0.27.3",
+    "zensical>=0.0.69",
 ]
 
 [project.scripts]
@@ -36,7 +37,6 @@ dev = [
 ]
 docs = [
     "mkdocstrings-python>=2.0",
-    "zensical>=0.0.69",
 ]
 
 [build-system]

@@ -4,6 +4,7 @@ import pytest
 
 from auto_biblio.domain.errors import ConfigError
 from auto_biblio.repo_config.loader import load_repo_config
+from auto_biblio.repo_config.site import SiteConfig
 
 PROFILE = """
 themes:
@@ -98,3 +99,26 @@ def test_loader_reads_analysis(tmp_path: Path) -> None:
     assert load_repo_config(root).analysis.deep_count == 2
     (root / "config" / "analysis.yaml").write_text("")
     assert load_repo_config(root).analysis.deep_count == 4
+
+
+def test_site_optional(tmp_path: Path) -> None:
+    assert load_repo_config(write_repo(tmp_path)).site == SiteConfig()
+
+
+def test_loader_reads_site(tmp_path: Path) -> None:
+    root = write_repo(tmp_path)
+    (root / "config" / "site.yaml").write_text("site_url: https://x.pages.dev\n")
+    assert load_repo_config(root).site.site_url == "https://x.pages.dev/"
+
+
+def test_empty_site_file_means_defaults(tmp_path: Path) -> None:
+    root = write_repo(tmp_path)
+    (root / "config" / "site.yaml").write_text("")
+    assert load_repo_config(root).site == SiteConfig()
+
+
+def test_loader_invalid_site(tmp_path: Path) -> None:
+    root = write_repo(tmp_path)
+    (root / "config" / "site.yaml").write_text("theme: dark\n")
+    with pytest.raises(ConfigError, match=r"config/site\.yaml"):
+        load_repo_config(root)

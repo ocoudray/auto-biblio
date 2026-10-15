@@ -5,3 +5,5 @@ __pycache__/
 # Embedding cache: derived data, restored by the weekly workflow's actions/cache
 .cache/
 digest.html
+# Site built locally or by the weekly workflow; published, never committed
+site/

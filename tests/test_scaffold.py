@@ -2,6 +2,7 @@ from importlib.resources import files
 from pathlib import Path
 
 import pytest
+import yaml
 
 from auto_biblio.repo_config.analysis import AnalysisConfig
 from auto_biblio.repo_config.loader import load_repo_config
@@ -114,3 +115,45 @@ def test_workflows_pin_the_version(tmp_path: Path) -> None:
     assert "continue-on-error: true" in weekly
     assert "git add state kb" in weekly
     assert '${WEEK:+--week "$WEEK"}' in weekly
+
+
+def weekly_steps(tmp_path: Path) -> dict[str, dict[str, object]]:
+    scaffold_data_repo(tmp_path, "1.2.3")
+    raw = yaml.safe_load((tmp_path / ".github/workflows/weekly.yml").read_text())
+    steps: list[dict[str, object]] = raw["jobs"]["triage"]["steps"]
+    return {str(step["name"]): step for step in steps if "name" in step}
+
+
+def test_weekly_builds_and_deploys_the_site_before_the_digest(tmp_path: Path) -> None:
+    steps = weekly_steps(tmp_path)
+    names = list(steps)
+    assert names[names.index("Analyze") :] == [
+        "Analyze",
+        "Site build",
+        "Site deploy",
+        "Digest",
+        "Keep the dry-run digest",
+        "Keep the dry-run site",
+        "Commit state",
+        "Report a site failure",
+    ]
+    assert steps["Site build"]["continue-on-error"] is True
+    assert steps["Site build"]["run"] == "auto-biblio site build --out site"
+    deploy = steps["Site deploy"]
+    assert deploy["continue-on-error"] is True
+    assert deploy["uses"] == "cloudflare/wrangler-action@v3"
+    assert "inputs.dry_run" in str(deploy["if"])
+    assert "pages deploy site" in str(deploy["with"])
+    assert "${{ secrets.CLOUDFLARE_API_TOKEN }}" in str(deploy["with"])
+    assert "inputs.dry_run" in str(steps["Keep the dry-run site"]["if"])
+
+
+def test_weekly_fails_the_run_after_a_site_failure(tmp_path: Path) -> None:
+    steps = weekly_steps(tmp_path)
+    assert list(steps)[-1] == "Report a site failure"
+    assert steps["Site build"]["id"] == "site_build"
+    assert steps["Site deploy"]["id"] == "site_deploy"
+    report = steps["Report a site failure"]
+    assert "steps.site_build.outcome == 'failure'" in str(report["if"])
+    assert "steps.site_deploy.outcome == 'failure'" in str(report["if"])
+    assert "exit 1" in str(report["run"])
