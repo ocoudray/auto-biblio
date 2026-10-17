@@ -1,0 +1,27 @@
+# Template: `auto-biblio init` fills in the version; literal dollar signs are doubled here.
+name: Wiki check
+
+on:
+  pull_request:
+    paths:
+      - "wiki/**"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AUTO_BIBLIO_DATA_REPO: $${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Install auto-biblio
+        run: uv tool install git+https://github.com/ocoudray/auto-biblio@v$version
+      - name: Check the wiki
+        run: auto-biblio wiki check
+      - name: Build the site
+        # Not strict: a broken link in a note written by the LLM must not block a wiki page.
+        run: auto-biblio site build --out site

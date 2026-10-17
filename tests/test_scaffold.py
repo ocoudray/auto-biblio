@@ -10,8 +10,12 @@ from auto_biblio.repo_config.triage import TriageConfig
 from auto_biblio.scaffold import ScaffoldExistsError, scaffold_data_repo
 
 EXPECTED = [
+    ".claude/skills/wiki-plan/SKILL.md",
+    ".claude/skills/wiki-rediger/SKILL.md",
+    ".claude/skills/wiki-reprendre/SKILL.md",
     ".github/workflows/daily.yml",
     ".github/workflows/weekly.yml",
+    ".github/workflows/wiki-check.yml",
     ".gitignore",
     "config/analysis.yaml",
     "config/llm.yaml",
@@ -20,6 +24,7 @@ EXPECTED = [
     "config/triage.yaml",
     "kb/.gitkeep",
     "state/.gitkeep",
+    "wiki/GUIDE.md",
 ]
 
 
@@ -129,6 +134,7 @@ def test_weekly_builds_and_deploys_the_site_before_the_digest(tmp_path: Path) ->
     names = list(steps)
     assert names[names.index("Analyze") :] == [
         "Analyze",
+        "Wiki link",
         "Site build",
         "Site deploy",
         "Digest",
@@ -157,3 +163,42 @@ def test_weekly_fails_the_run_after_a_site_failure(tmp_path: Path) -> None:
     assert "steps.site_build.outcome == 'failure'" in str(report["if"])
     assert "steps.site_deploy.outcome == 'failure'" in str(report["if"])
     assert "exit 1" in str(report["run"])
+
+
+def test_weekly_links_the_wiki_without_blocking(tmp_path: Path) -> None:
+    step = weekly_steps(tmp_path)["Wiki link"]
+    assert step["continue-on-error"] is True
+    assert step["run"] == 'auto-biblio wiki link ${WEEK:+--week "$WEEK"}'
+
+
+def test_skills_are_copied_verbatim(tmp_path: Path) -> None:
+    scaffold_data_repo(tmp_path, "1.2.3")
+    for skill in ("wiki-plan", "wiki-rediger", "wiki-reprendre"):
+        text = (tmp_path / ".claude/skills" / skill / "SKILL.md").read_text()
+        meta = yaml.safe_load(text.split("---")[1])
+        assert meta["name"] == skill
+        assert meta["description"]
+        assert "$ARGUMENTS" in text
+    guide = (tmp_path / "wiki/GUIDE.md").read_text()
+    assert "## Règles issues des relectures" in guide
+
+
+def test_wiki_check_workflow(tmp_path: Path) -> None:
+    scaffold_data_repo(tmp_path, "1.2.3")
+    raw = yaml.safe_load((tmp_path / ".github/workflows/wiki-check.yml").read_text())
+    # PyYAML reads the `on` key as the boolean True.
+    assert raw[True]["pull_request"]["paths"] == ["wiki/**"]
+    runs = [str(step.get("run", "")) for step in raw["jobs"]["check"]["steps"]]
+    assert any("auto-biblio@v1.2.3" in run for run in runs)
+    assert "auto-biblio wiki check" in runs
+    assert "auto-biblio site build --out site" in runs
+
+
+def test_wiki_link_chain(tmp_path: Path) -> None:
+    scaffold_data_repo(tmp_path, "1.2.3")
+    llm = load_repo_config(tmp_path).require_llm()
+    assert [s.id for s in llm.chain("wiki_link")] == [
+        "google:gemini-3.5-flash-lite",
+        "google:gemini-3.1-flash-lite",
+        "google:gemma-4-31b-it",
+    ]

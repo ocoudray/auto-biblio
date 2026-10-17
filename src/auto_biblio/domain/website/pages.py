@@ -1,6 +1,6 @@
 """Pages taken from `kb/`, with a metadata line the files themselves do not show."""
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 
 from auto_biblio.domain.errors import KBFormatError
 from auto_biblio.domain.features import ThemeId
@@ -12,13 +12,19 @@ KIND_LABELS: dict[NoteKind, str] = {"paper": "Article", "tool": "Outil", "post":
 DEPTH_LABELS: dict[Depth, str] = {"short": "fiche courte", "deep": "fiche approfondie"}
 
 
-def note_page(text: str, origin: str, labels: Mapping[ThemeId, str]) -> tuple[str, Note | None]:
+def note_page(
+    text: str,
+    origin: str,
+    labels: Mapping[ThemeId, str],
+    notions: Sequence[tuple[str, str]] = (),
+) -> tuple[str, Note | None]:
     """Turn a note file into its page: the file, with its metadata under the title.
 
     Args:
         text: The note file.
         origin: Its path, for error messages.
         labels: Theme labels by id; an unknown theme shows its id.
+        notions: Wiki notions the note is linked to, as (title, path relative to the note).
 
     Returns:
         The page (raw HTML neutralised) and the parsed note, or the page alone and None when
@@ -37,7 +43,11 @@ def note_page(text: str, origin: str, labels: Mapping[ThemeId, str]) -> tuple[st
         f"vue le {meta.first_seen.isoformat()}",
         f"analysée le {meta.analyzed_at.isoformat()}",
     ]
-    return _under_title(escape_body(text), "> " + " · ".join(parts)), note
+    header = "> " + " · ".join(parts)
+    if notions:
+        links = " · ".join(f"[{link_text(title)}]({href})" for title, href in notions)
+        header += f"\n\n> Notions : {links}"
+    return under_title(escape_body(text), header), note
 
 
 def theme_page(text: str, origin: str) -> tuple[str, ThemePage | None]:
@@ -56,10 +66,19 @@ def theme_page(text: str, origin: str) -> tuple[str, ThemePage | None]:
     except KBFormatError:
         return escape_body(text), None
     date_line = f"> Mise à jour le {page.meta.updated_at.isoformat()}"
-    return _under_title(escape_body(text), date_line), page
+    return under_title(escape_body(text), date_line), page
 
 
-def _under_title(text: str, line: str) -> str:
+def under_title(text: str, line: str) -> str:
+    """Insert a line under the `# ` title of a page, after a blank line.
+
+    Args:
+        text: A page that has a `# ` title.
+        line: The text to insert.
+
+    Returns:
+        The page with the line under its title.
+    """
     lines = text.split("\n")
     # Parsed files always have a `# ` title after their front-matter.
     title = next(i for i, current in enumerate(lines) if current.startswith("# "))

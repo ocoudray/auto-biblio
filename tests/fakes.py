@@ -97,6 +97,12 @@ def ignore_fallback(_role: str, _model_id: str, _reason: str) -> None:
 def answer_for(task: LLMTask[BaseModel]) -> dict[str, object]:
     """Answer any task of the pipeline like a sensible model."""
     name = task.output_type.__name__
+    if name == "LinkBatch":
+        notes = cast("list[dict[str, str]]", json.loads(task.user_prompt.removeprefix("Notes:\n")))
+        linked = ["llm/attention"] if '"llm/attention"' in task.system_prompt else []
+        return {
+            "links": [{"ref": n["ref"], "notions": linked, "missing": ["KV cache"]} for n in notes]
+        }
     if name == "TriageBatch":
         return verdicts_for(cast("LLMTask[TriageBatch]", task)).model_dump()
     short: dict[str, object] = {

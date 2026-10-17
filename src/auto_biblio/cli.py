@@ -21,6 +21,8 @@ from auto_biblio.domain.errors import (
 )
 from auto_biblio.domain.learning import FixedScoring, build_examples, evaluate_variants
 from auto_biblio.domain.models import Clock
+from auto_biblio.domain.wiki.check import check_wiki
+from auto_biblio.domain.wiki.pages import load_wiki
 from auto_biblio.embeddings.cache import CachedEmbedder
 from auto_biblio.integrations.github_issues import GithubIssues
 from auto_biblio.log import configure_logging
@@ -37,6 +39,7 @@ from auto_biblio.stages.feedback import FeedbackStage
 from auto_biblio.stages.refresh import SignalRefreshStage
 from auto_biblio.stages.site import SiteStage
 from auto_biblio.stages.triage import TriageStage
+from auto_biblio.stages.wiki_link import WikiLinkStage
 from auto_biblio.store.analysis import AnalysisStore
 from auto_biblio.store.cursors import CursorStore
 from auto_biblio.store.feedback import FeedbackStore
@@ -45,6 +48,7 @@ from auto_biblio.store.kb import KBStore
 from auto_biblio.store.runs import RunStore
 from auto_biblio.store.signals import SignalStore
 from auto_biblio.store.triage import TriageStore
+from auto_biblio.store.wiki import WikiStore
 from auto_biblio.wiring import REAL_SERVICES, Services, llm_factory, usable_llm_config
 
 logger = logging.getLogger(__name__)
@@ -136,8 +140,10 @@ def create_app(  # noqa: C901, PLR0915 - one nested function per command keeps t
     app.add_typer(signals_app, name="signals")
     app.add_typer(feedback_app, name="feedback")
     site_app = typer.Typer(no_args_is_help=True, help="Knowledge-base site.")
+    wiki_app = typer.Typer(no_args_is_help=True, help="Knowledge wiki.")
     app.add_typer(eval_app, name="eval")
     app.add_typer(site_app, name="site")
+    app.add_typer(wiki_app, name="wiki")
     settings = Settings()
 
     @app.callback()
@@ -298,6 +304,55 @@ def create_app(  # noqa: C901, PLR0915 - one nested function per command keeps t
         for degradation in run.degradations:
             typer.echo(f"degraded: {degradation}")
 
+    @wiki_app.command("check")
+    def wiki_check(data_dir: DataDirOption = None) -> None:
+        """Check the structure of the wiki (front-matter, links, figures, reading order)."""
+        root = data_dir or settings.data_dir
+        config = _load_config(root)
+        store = WikiStore(root)
+        if not store.exists():
+            typer.echo("no wiki/ directory")
+            return
+        wiki = load_wiki(store.files(), store.assets())
+        problems = check_wiki(wiki, frozenset(t.id for t in config.profile.themes))
+        for problem in problems:
+            typer.echo(str(problem))
+        typer.echo(f"wiki: {len(wiki.notions)} notions, {len(problems)} problems")
+        if problems:
+            raise typer.Exit(EXIT_CONFIG_ERROR)
+
+    @wiki_app.command("link")
+    def wiki_link(data_dir: DataDirOption = None, week: WeekOption = None) -> None:
+        """Tag the notes with the notions of the wiki and collect the missing ones."""
+        root = data_dir or settings.data_dir
+        config = _load_config(root)
+        store = WikiStore(root)
+        if not store.exists():
+            typer.echo("no wiki/ directory")
+            return
+        state = root / "state"
+        try:
+            llm_config = usable_llm_config(config.require_llm(), settings)
+            config = config.model_copy(update={"llm": llm_config})
+            stage = WikiLinkStage(
+                config,
+                KBStore.open(root / "kb"),
+                store,
+                TriageStore(state),
+                AnalysisStore(state),
+                llm_factory=llm_factory(services.model_runner(settings), llm_config, state),
+                clock=clock,
+            )
+            report = stage.run(week)
+        except ConfigError as exc:
+            raise _fail(str(exc), EXIT_CONFIG_ERROR) from exc
+        typer.echo(
+            f"wiki link: {report.processed} notes, {report.linked} linked, "
+            f"{report.candidates} candidates"
+        )
+        for degradation in report.degradations:
+            typer.echo(f"degraded: {degradation}")
+
     @site_app.command("build")
     def site_build(
         data_dir: DataDirOption = None,
@@ -316,6 +371,7 @@ def create_app(  # noqa: C901, PLR0915 - one nested function per command keeps t
             ItemStore.open(state),
             AnalysisStore(state),
             builder=services.site_builder(),
+            wiki=WikiStore(root),
         )
         try:
             plan = stage.run(out)

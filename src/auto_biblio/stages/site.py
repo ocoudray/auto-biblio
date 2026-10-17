@@ -8,6 +8,7 @@ from auto_biblio.domain.ids import ItemId
 from auto_biblio.domain.kb.notes import Note
 from auto_biblio.domain.triage import TriageRun
 from auto_biblio.domain.website.plan import SiteInputs, SitePlan, plan_site
+from auto_biblio.domain.wiki.links import WikiLinks
 from auto_biblio.publish.render import render_digest_markdown
 from auto_biblio.publish.view import HealthSummary, KBLinks, build_view, kb_changes, note_links
 from auto_biblio.repo_config.loader import RepoConfig
@@ -15,6 +16,7 @@ from auto_biblio.store.analysis import AnalysisStore
 from auto_biblio.store.items import ItemStore
 from auto_biblio.store.kb import KBStore
 from auto_biblio.store.triage import TriageStore
+from auto_biblio.store.wiki import WikiStore
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +44,7 @@ class SiteStage:
         analyses: AnalysisStore,
         *,
         builder: SiteBuilderPort,
+        wiki: WikiStore | None = None,
     ) -> None:
         """Build the stage.
 
@@ -52,6 +55,7 @@ class SiteStage:
             items: Collected items.
             analyses: Analysis journals, for the knowledge base changes of each week.
             builder: Turns the plan into HTML.
+            wiki: The wiki, published under `wiki/` when the repository has one.
         """
         self._config = config
         self._kb = kb
@@ -59,6 +63,7 @@ class SiteStage:
         self._items = items
         self._analyses = analyses
         self._builder = builder
+        self._wiki = wiki
 
     def run(self, out: Path) -> SitePlan:
         """Plan the site and build it into `out`.
@@ -70,11 +75,15 @@ class SiteStage:
             The plan that was built.
         """
         notes = {note.meta.id: note for note in self._kb.all_notes()}
+        wiki = self._wiki if self._wiki is not None and self._wiki.exists() else None
         inputs = SiteInputs(
             title=self._config.site.title,
             profile=self._config.profile,
             kb_files=self._kb.files(),
             digests={run.week: self._digest(run, notes) for run in self._triage.all()},
+            wiki_files=wiki.files() if wiki else {},
+            wiki_assets=wiki.assets() if wiki else {},
+            wiki_links=wiki.read_links() if wiki else WikiLinks(),
         )
         plan = plan_site(inputs)
         for warning in plan.warnings:

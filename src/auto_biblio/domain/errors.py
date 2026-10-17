@@ -232,3 +232,18 @@ class SiteOutputError(AutoBiblioError):
         """
         self.out = out
         super().__init__(f"cannot build the site into {out}: {reason}")
+
+
+class WikiFormatError(AutoBiblioError):
+    """A page of the wiki cannot be read."""
+
+    def __init__(self, origin: str, message: str) -> None:
+        """Build the error.
+
+        Args:
+            origin: The file, relative to `wiki/`.
+            message: What is wrong.
+        """
+        self.origin = origin
+        self.reason = message
+        super().__init__(f"{origin}: {message}")

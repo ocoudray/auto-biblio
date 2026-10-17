@@ -4,6 +4,7 @@ from builders import make_features, make_item, make_note, make_run, make_verdict
 
 from auto_biblio.domain.triage import ScoredItem
 from auto_biblio.domain.website.plan import SitePlan
+from auto_biblio.domain.wiki.links import NoteLinks, WikiLinks
 from auto_biblio.repo_config.loader import RepoConfig
 from auto_biblio.repo_config.site import SiteConfig
 from auto_biblio.stages.site import SiteStage
@@ -11,6 +12,7 @@ from auto_biblio.store.analysis import AnalysisStore
 from auto_biblio.store.items import ItemStore
 from auto_biblio.store.kb import KBStore
 from auto_biblio.store.triage import TriageStore
+from auto_biblio.store.wiki import WikiStore
 
 CONFIG = RepoConfig.model_validate(
     {
@@ -29,7 +31,7 @@ class RecordingBuilder:
         self.calls.append((plan, title, out))
 
 
-def seeded(tmp_path: Path) -> tuple[SiteStage, RecordingBuilder]:
+def seeded(tmp_path: Path, wiki: WikiStore | None = None) -> tuple[SiteStage, RecordingBuilder]:
     state = tmp_path / "state"
     items = ItemStore.open(state)
     items.upsert(make_item(title="Agent harness"))
@@ -54,6 +56,7 @@ def seeded(tmp_path: Path) -> tuple[SiteStage, RecordingBuilder]:
         ItemStore.open(state),
         AnalysisStore(state),
         builder=builder,
+        wiki=wiki,
     )
     return stage, builder
 
@@ -67,3 +70,23 @@ def test_stage_plans_and_builds(tmp_path: Path) -> None:
     assert "[fiche](../notes/papers/arxiv-2410.12345.md)" in digest
     assert PurePosixPath("notes/papers/arxiv-2410.12345.md") in plan.pages
     assert plan.pages[PurePosixPath("index.md")].startswith("# Ma veille")
+
+
+def test_stage_publishes_the_wiki(tmp_path: Path) -> None:
+    domain = tmp_path / "wiki" / "llm"
+    (domain / "img").mkdir(parents=True)
+    (domain / "index.md").write_text("---\ntitle: LLM\norder: [llm/attention]\n---\n\nI.\n")
+    (domain / "attention.md").write_text(
+        "---\ntitle: Attention\nupdated_at: 2026-10-20\n---\n\n# Attention\n\nR.\n"
+    )
+    (domain / "img" / "a.svg").write_bytes(b"<svg/>")
+    wiki = WikiStore(tmp_path)
+    wiki.write_links(
+        WikiLinks(notes={make_item().id: NoteLinks(notions=("llm/attention",), signature="s")})
+    )
+    stage, _ = seeded(tmp_path, wiki=wiki)
+    plan = stage.run(tmp_path / "out")
+    assert PurePosixPath("wiki/llm/attention.md") in plan.pages
+    assert plan.assets == {PurePosixPath("wiki/llm/img/a.svg"): b"<svg/>"}
+    note = plan.pages[PurePosixPath("notes/papers/arxiv-2410.12345.md")]
+    assert "> Notions : [Attention](../../wiki/llm/attention.md)" in note

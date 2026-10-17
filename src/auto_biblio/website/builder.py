@@ -14,6 +14,26 @@ from auto_biblio.domain.website.plan import NavEntry, SitePlan
 MARKER = ".auto-biblio-site"
 """File left in every built site: only such a directory, or an empty one, is ever replaced."""
 FEATURES = ("navigation.indexes", "navigation.instant", "navigation.top", "search.highlight")
+MATHJAX_CONFIG = "javascripts/mathjax.js"
+MATHJAX_URL = "https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"
+MATHJAX_SCRIPT = """window.MathJax = {
+  tex: { inlineMath: [["\\\\(", "\\\\)"]], displayMath: [["\\\\[", "\\\\]"]],
+         processEscapes: true, processEnvironments: true },
+  options: { ignoreHtmlClass: ".*|", processHtmlClass: "arithmatex" }
+};
+document$.subscribe(() => {
+  MathJax.startup.output.clearCache();
+  MathJax.typesetClear();
+  MathJax.texReset();
+  MathJax.typesetPromise();
+});
+"""
+"""MathJax setup for `pymdownx.arithmatex`; re-typesets after each instant navigation.
+
+zensical's default Markdown extensions already include `arithmatex` (generic) and the
+`mermaid` fence; declaring extensions would replace those defaults, so none are declared and
+the builder tests pin the rendering instead.
+"""
 _PALETTES = """
 [[project.theme.palette]]
 media = "(prefers-color-scheme: light)"
@@ -58,7 +78,8 @@ def render_config(title: str, nav: Sequence[NavEntry]) -> str:
         f"site_name = {_toml(title)}\n"
         'docs_dir = "docs"\n'
         'site_dir = "site"\n'
-        f"nav = [\n{entries}\n]\n\n"
+        f"nav = [\n{entries}\n]\n"
+        f"extra_javascript = [{_toml(MATHJAX_CONFIG)}, {_toml(MATHJAX_URL)}]\n\n"
         "[project.theme]\n"
         'language = "fr"\n'
         f"features = [{features}]\n"
@@ -96,6 +117,13 @@ class SiteBuilder:
                 target = root / "docs" / path
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(text, encoding="utf-8")
+            for path, data in plan.assets.items():
+                target = root / "docs" / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(data)
+            script = root / "docs" / MATHJAX_CONFIG
+            script.parent.mkdir(parents=True, exist_ok=True)
+            script.write_text(MATHJAX_SCRIPT, encoding="utf-8")
             config = root / "zensical.toml"
             config.write_text(render_config(title, plan.nav), encoding="utf-8")
             command = [sys.executable, "-m", "zensical", "build", "-f", str(config)]

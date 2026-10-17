@@ -15,7 +15,7 @@
 # Daily quotas reset at midnight Pacific time.
 #
 # Roles get the model their prompt size and value call for:
-#   - triage and short notes (small prompts, most calls): Flash-Lite, then Gemma;
+#   - triage, short notes and wiki links (small prompts, most calls): Flash-Lite, then Gemma;
 #   - deep analyses and theme page (up to 30-40K input tokens, few calls): the Flash models,
 #     each with its own 20 requests per day, then Flash-Lite. Never Gemma: its 16K tokens per
 #     minute cannot take these prompts.
@@ -81,6 +81,7 @@ chains:
   short_note: [flash-lite, flash-lite-3.1, gemma]
   deep_analysis: [flash-3.8, flash-3.7, flash-3.6, flash-3, flash-lite]
   synthesis: [flash-3.8, flash-3.7, flash-3.6, flash-3, flash-lite]
+  wiki_link: [flash-lite, flash-lite-3.1, gemma]
 
 # Weekly caps: tokens count for every model, dollars for paid ones only.
 weekly_budget:

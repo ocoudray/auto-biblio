@@ -1,6 +1,6 @@
 [project]
 name = "auto-biblio"
-version = "0.6.0"
+version = "0.7.0"
 description = "Routine to fetch automatically new research and development on AI, and give a recap of the most relevant advances"
 readme = "README.md"
 authors = [{ name = "Olivier COUDRAY", email = "olivier.coudray.15@polytechnique.org" }]

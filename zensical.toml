@@ -13,6 +13,8 @@ nav = [
   { "Knowledge-base site" = "site.md" },
   { "Upgrade to 0.5" = "upgrade-0.5.md" },
   { "Upgrade to 0.6" = "upgrade-0.6.md" },
+  { "Knowledge wiki" = "wiki.md" },
+  { "Upgrade to 0.7" = "upgrade-0.7.md" },
   { "Design" = [
     { "Vision" = "superpowers/specs/2026-10-10-auto-biblio-vision-design.md" },
     { "Collection spec" = "superpowers/specs/2026-10-10-socle-collecte-design.md" },
@@ -23,6 +25,8 @@ nav = [
     { "Analysis & KB plan" = "superpowers/plans/2026-10-10-analyse-kb.md" },
     { "Site spec" = "superpowers/specs/2026-10-14-site-design.md" },
     { "Site plan" = "superpowers/plans/2026-10-14-site.md" },
+    { "Wiki spec" = "superpowers/specs/2026-10-17-wiki-design.md" },
+    { "Wiki plan" = "superpowers/plans/2026-10-17-wiki.md" },
   ] },
   { "Reference" = "reference/index.md" },
   { "Coverage" = "coverage.md" },

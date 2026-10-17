@@ -100,3 +100,57 @@ def test_broken_link_fails_in_strict_mode(tmp_path: Path) -> None:
     )
     with pytest.raises(SiteBuildError, match="zensical build failed"):
         SiteBuilder(strict=True).build(broken, "Veille IA", tmp_path / "out")
+
+
+def test_config_loads_mathjax() -> None:
+    config = tomllib.loads(render_config("Veille IA", ()))["project"]
+    assert config["extra_javascript"] == [
+        "javascripts/mathjax.js",
+        "https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js",
+    ]
+
+
+def test_build_renders_math_mermaid_and_figures(tmp_path: Path) -> None:
+    page = (
+        "# Attention\n\nLe score $q \\cdot k$ :\n\n$$\nsoftmax(x)\n$$\n\n"
+        "```mermaid\ngraph LR\n  A --> B\n```\n\n![Figure](img/a.svg)\n\n"
+        "| a | b |\n|---|---|\n| 1 | 2 |\n"
+    )
+    plan = SitePlan(
+        pages={
+            PurePosixPath("index.md"): "# Accueil\n",
+            PurePosixPath("wiki/llm/attention.md"): page,
+        },
+        nav=(NavEntry(title="Attention", path="wiki/llm/attention.md"),),
+        assets={PurePosixPath("wiki/llm/img/a.svg"): b'<svg xmlns="http://www.w3.org/2000/svg"/>'},
+    )
+    out = tmp_path / "out"
+    SiteBuilder(strict=True).build(plan, "Veille IA", out)
+    html = (out / "wiki/llm/attention/index.html").read_text(encoding="utf-8")
+    assert 'class="arithmatex"' in html
+    assert '<pre class="mermaid">' in html
+    assert "<table>" in html
+    assert (out / "javascripts/mathjax.js").exists()
+    assert (out / "wiki/llm/img/a.svg").read_bytes().startswith(b"<svg")
+
+
+def test_build_survives_a_broken_wiki_page_and_keeps_code(tmp_path: Path) -> None:
+    index = "---\ntitle: LLM\norder: [llm/attention]\n---\n\nIntro.\n"
+    attention = (
+        "---\ntitle: Attention\nupdated_at: 2026-10-20\n---\n\n# Attention\n\nR.\n\n"
+        "```mermaid\ngraph LR\n  A <--> B\n```\n\n`List<int>`\n"
+    )
+    broken = "---\ntitle: Bad: yaml\n---\n\n# Bad\n"
+    files = {
+        PurePosixPath("llm/index.md"): index,
+        PurePosixPath("llm/attention.md"): attention,
+        PurePosixPath("llm/broken.md"): broken,
+    }
+    plan = plan_site(
+        SiteInputs(title="V", profile=PROFILE, kb_files={}, digests={}, wiki_files=files)
+    )
+    out = tmp_path / "out"
+    SiteBuilder().build(plan, "V", out)
+    html = (out / "wiki/llm/attention/index.html").read_text(encoding="utf-8")
+    assert "&amp;lt;" not in html
+    assert (out / "wiki/llm/broken/index.html").exists()

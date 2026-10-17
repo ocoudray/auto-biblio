@@ -62,6 +62,9 @@ rewritten, and the links added or removed. The digest shows the same changes und
 *Évolutions de la base*, links each item to its note, and shows the verdict of deep analyses.
 With a [site](site.md), these links open the note on the site instead of GitHub.
 
+Notes are also linked to the notions of the [knowledge wiki](wiki.md) by the weekly
+`wiki link` step.
+
 ## Reliability
 
 - `analyze` shares the weekly LLM budget with the triage. It writes the short notes first,
