@@ -21,6 +21,8 @@ from auto_biblio.domain.errors import (
 )
 from auto_biblio.domain.learning import FixedScoring, build_examples, evaluate_variants
 from auto_biblio.domain.models import Clock
+from auto_biblio.domain.wiki.check import check_wiki
+from auto_biblio.domain.wiki.pages import load_wiki
 from auto_biblio.embeddings.cache import CachedEmbedder
 from auto_biblio.integrations.github_issues import GithubIssues
 from auto_biblio.log import configure_logging
@@ -45,6 +47,7 @@ from auto_biblio.store.kb import KBStore
 from auto_biblio.store.runs import RunStore
 from auto_biblio.store.signals import SignalStore
 from auto_biblio.store.triage import TriageStore
+from auto_biblio.store.wiki import WikiStore
 from auto_biblio.wiring import REAL_SERVICES, Services, llm_factory, usable_llm_config
 
 logger = logging.getLogger(__name__)
@@ -136,8 +139,10 @@ def create_app(  # noqa: C901, PLR0915 - one nested function per command keeps t
     app.add_typer(signals_app, name="signals")
     app.add_typer(feedback_app, name="feedback")
     site_app = typer.Typer(no_args_is_help=True, help="Knowledge-base site.")
+    wiki_app = typer.Typer(no_args_is_help=True, help="Knowledge wiki.")
     app.add_typer(eval_app, name="eval")
     app.add_typer(site_app, name="site")
+    app.add_typer(wiki_app, name="wiki")
     settings = Settings()
 
     @app.callback()
@@ -297,6 +302,23 @@ def create_app(  # noqa: C901, PLR0915 - one nested function per command keeps t
         typer.echo(f"{run.week}: {changed} notes written, theme page: {run.theme or 'none'}")
         for degradation in run.degradations:
             typer.echo(f"degraded: {degradation}")
+
+    @wiki_app.command("check")
+    def wiki_check(data_dir: DataDirOption = None) -> None:
+        """Check the structure of the wiki (front-matter, links, figures, reading order)."""
+        root = data_dir or settings.data_dir
+        config = _load_config(root)
+        store = WikiStore(root)
+        if not store.exists():
+            typer.echo("no wiki/ directory")
+            return
+        wiki = load_wiki(store.files(), store.assets())
+        problems = check_wiki(wiki, frozenset(t.id for t in config.profile.themes))
+        for problem in problems:
+            typer.echo(str(problem))
+        typer.echo(f"wiki: {len(wiki.notions)} notions, {len(problems)} problems")
+        if problems:
+            raise typer.Exit(EXIT_CONFIG_ERROR)
 
     @site_app.command("build")
     def site_build(

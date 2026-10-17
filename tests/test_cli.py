@@ -360,3 +360,29 @@ def test_site_build_failure(triage_dir: Path, tmp_path: Path) -> None:
     )
     assert result.exit_code == 5
     assert "zensical build failed" in result.stderr
+
+
+WIKI_INDEX = "---\ntitle: LLM\norder: [llm/attention]\n---\n\nIntro.\n"
+WIKI_NOTION = (
+    "---\ntitle: Attention\nupdated_at: 2026-10-20\n---\n\n# Attention\n\nRésumé.\n\n"
+    "## Références fondatrices\n\n- Ref.\n"
+)
+
+
+def test_wiki_check_without_wiki(data_dir: Path) -> None:
+    result = runner.invoke(app_with(), ["wiki", "check", "--data-dir", str(data_dir)])
+    assert result.exit_code == 0
+    assert "no wiki/ directory" in result.output
+
+
+def test_wiki_check(data_dir: Path) -> None:
+    (data_dir / "wiki/llm").mkdir(parents=True)
+    (data_dir / "wiki/llm/index.md").write_text(WIKI_INDEX)
+    (data_dir / "wiki/llm/attention.md").write_text(WIKI_NOTION)
+    ok = runner.invoke(app_with(), ["wiki", "check", "--data-dir", str(data_dir)])
+    assert ok.exit_code == 0, ok.output
+    assert "wiki: 1 notions, 0 problems" in ok.output
+    (data_dir / "wiki/llm/extra.md").write_text(WIKI_NOTION)
+    bad = runner.invoke(app_with(), ["wiki", "check", "--data-dir", str(data_dir)])
+    assert bad.exit_code == 1
+    assert "llm/extra.md: not listed in llm/index.md order" in bad.output

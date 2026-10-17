@@ -245,4 +245,5 @@ class WikiFormatError(AutoBiblioError):
             message: What is wrong.
         """
         self.origin = origin
+        self.reason = message
         super().__init__(f"{origin}: {message}")

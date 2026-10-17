@@ -163,5 +163,5 @@ def load_wiki(files: Mapping[PurePosixPath, str], assets: Iterable[PurePosixPath
                 notion_id = f"{domain}/{name}"
                 notions[notion_id] = parse_notion(text, notion_id, path.as_posix())
         except WikiFormatError as exc:
-            unreadable[path] = str(exc)
+            unreadable[path] = exc.reason
     return Wiki(domains=domains, notions=notions, assets=frozenset(assets), unreadable=unreadable)
