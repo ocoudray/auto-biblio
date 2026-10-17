@@ -24,6 +24,7 @@ nav = [
     { "Site spec" = "superpowers/specs/2026-10-14-site-design.md" },
     { "Site plan" = "superpowers/plans/2026-10-14-site.md" },
     { "Wiki spec" = "superpowers/specs/2026-10-17-wiki-design.md" },
+    { "Wiki plan" = "superpowers/plans/2026-10-17-wiki.md" },
   ] },
   { "Reference" = "reference/index.md" },
   { "Coverage" = "coverage.md" },
