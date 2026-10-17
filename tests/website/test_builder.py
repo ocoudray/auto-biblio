@@ -132,3 +132,25 @@ def test_build_renders_math_mermaid_and_figures(tmp_path: Path) -> None:
     assert "<table>" in html
     assert (out / "javascripts/mathjax.js").exists()
     assert (out / "wiki/llm/img/a.svg").read_bytes().startswith(b"<svg")
+
+
+def test_build_survives_a_broken_wiki_page_and_keeps_code(tmp_path: Path) -> None:
+    index = "---\ntitle: LLM\norder: [llm/attention]\n---\n\nIntro.\n"
+    attention = (
+        "---\ntitle: Attention\nupdated_at: 2026-10-20\n---\n\n# Attention\n\nR.\n\n"
+        "```mermaid\ngraph LR\n  A <--> B\n```\n\n`List<int>`\n"
+    )
+    broken = "---\ntitle: Bad: yaml\n---\n\n# Bad\n"
+    files = {
+        PurePosixPath("llm/index.md"): index,
+        PurePosixPath("llm/attention.md"): attention,
+        PurePosixPath("llm/broken.md"): broken,
+    }
+    plan = plan_site(
+        SiteInputs(title="V", profile=PROFILE, kb_files={}, digests={}, wiki_files=files)
+    )
+    out = tmp_path / "out"
+    SiteBuilder().build(plan, "V", out)
+    html = (out / "wiki/llm/attention/index.html").read_text(encoding="utf-8")
+    assert "&amp;lt;" not in html
+    assert (out / "wiki/llm/broken/index.html").exists()

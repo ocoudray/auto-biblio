@@ -16,7 +16,7 @@ from auto_biblio.domain.website.indexes import (
 )
 from auto_biblio.domain.website.nav import NavEntry
 from auto_biblio.domain.website.pages import note_page, theme_page
-from auto_biblio.domain.website.wiki import notion_links, wiki_section
+from auto_biblio.domain.website.wiki import has_pages, notion_links, wiki_section
 from auto_biblio.domain.wiki.links import WikiLinks
 from auto_biblio.domain.wiki.pages import load_wiki
 from auto_biblio.repo_config.profile import Profile
@@ -70,7 +70,7 @@ def plan_site(inputs: SiteInputs) -> SitePlan:
     """
     labels = {ThemeId(t.id): t.label for t in inputs.profile.themes}
     wiki = load_wiki(inputs.wiki_files, inputs.wiki_assets)
-    notions = notion_links(wiki, inputs.wiki_links) if wiki.domains else {}
+    notions = notion_links(wiki, inputs.wiki_links) if has_pages(wiki) else {}
     pages: dict[PurePosixPath, str] = {}
     notes: list[Note] = []
     themes: dict[ThemeId, ThemePage] = {}

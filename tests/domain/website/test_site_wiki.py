@@ -125,10 +125,36 @@ def test_navigation() -> None:
 
 
 def test_unreadable_page_is_published_with_a_warning() -> None:
-    files = {**FILES, P("llm/broken.md"): "oops <script>"}
+    files = {**FILES, P("llm/broken.md"): "---\ntitle: Bad: yaml\n---\n\noops <script>\n````\n"}
     pages, _, warnings = wiki_section(files, load_wiki(files, []), LINKS, NOTES)
-    assert pages[P("wiki/llm/broken.md")] == "oops &lt;script>"
+    page = pages[P("wiki/llm/broken.md")]
+    # The site generator parses a front-matter: an invalid one must not reach it.
+    assert page.startswith("# wiki/llm/broken.md\n")
+    assert "\n`````text\n---\ntitle: Bad: yaml\n" in page
+    assert page.endswith("\n`````\n")
     assert warnings == ("unreadable wiki/llm/broken.md",)
+
+
+def test_unreadable_index_keeps_the_domain() -> None:
+    files = {**FILES, P("llm/index.md"): "---\ntitle: LLM\nextra: 1\n---\n"}
+    pages, nav, warnings = wiki_section(files, load_wiki(files, []), LINKS, NOTES)
+    assert P("wiki/llm/attention.md") in pages
+    assert P("wiki/llm/index.md") in pages
+    assert warnings == ("unreadable wiki/llm/index.md",)
+    assert nav is not None
+    domain = nav.children[0]
+    assert domain.title == "llm"
+    assert [c.title for c in domain.children] == ["Attention", "Embeddings"]
+    assert notion_links(load_wiki(files, []), LINKS)[ItemId("a:1")]
+
+
+def test_code_is_not_escaped() -> None:
+    body = "`List<int>` and <b>\n\n```mermaid\nA <--> B\n```\n\n~~~\nif a < b: pass\n~~~\n"
+    files = {**FILES, P("llm/embeddings.md"): EMBEDDINGS + body}
+    page = wiki_section(files, load_wiki(files, []), LINKS, NOTES)[0][P("wiki/llm/embeddings.md")]
+    assert "`List<int>` and &lt;b>" in page
+    assert "A <--> B" in page
+    assert "if a < b: pass" in page
 
 
 def test_no_domain_no_section() -> None:

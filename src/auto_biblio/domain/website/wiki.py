@@ -7,7 +7,12 @@ from auto_biblio.domain.ids import ItemId
 from auto_biblio.domain.kb.notes import Note
 from auto_biblio.domain.website.nav import NavEntry
 from auto_biblio.domain.website.pages import under_title
-from auto_biblio.domain.website.text import escape_body, escape_html, link_text
+from auto_biblio.domain.website.text import (
+    as_code_block,
+    escape_html,
+    escape_outside_code,
+    link_text,
+)
 from auto_biblio.domain.wiki.links import WikiLinks
 from auto_biblio.domain.wiki.pages import Domain, Notion, Wiki
 
@@ -36,19 +41,31 @@ def wiki_section(
 
     Returns:
         The pages (under `wiki/`), the navigation entry and the warnings; nothing when the
-        wiki has no domain.
+        wiki has no page.
     """
-    if not wiki.domains:
+    if not has_pages(wiki):
         return {}, None, ()
     pages = {
         WIKI / f"{n.id}.md": _notion_page(n, wiki, links, notes) for n in wiki.notions.values()
     }
     pages.update({WIKI / d.id / "index.md": _domain_page(d, wiki) for d in wiki.domains.values()})
     pages[CANDIDATES] = _candidates_page(links, notes)
-    for path in wiki.unreadable:
-        pages[WIKI / path] = escape_body(files[path])
+    for path, reason in wiki.unreadable.items():
+        pages[WIKI / path] = _unreadable_page(WIKI / path, reason, files[path])
     warnings = tuple(f"unreadable {(WIKI / path).as_posix()}" for path in sorted(wiki.unreadable))
     return pages, _nav(wiki), warnings
+
+
+def has_pages(wiki: Wiki) -> bool:
+    """Whether the wiki has anything to publish.
+
+    Args:
+        wiki: The wiki.
+
+    Returns:
+        True when it has a domain, a notion or an unreadable page.
+    """
+    return bool(wiki.domains or wiki.notions or wiki.unreadable)
 
 
 def notion_links(wiki: Wiki, links: WikiLinks) -> dict[ItemId, tuple[tuple[str, str], ...]]:
@@ -80,7 +97,7 @@ def _href(source: str, target: str) -> str:
 
 def _notion_page(notion: Notion, wiki: Wiki, links: WikiLinks, notes: Mapping[ItemId, Note]) -> str:
     domain = notion.id.split("/")[0]
-    page = escape_html(notion.body.strip("\n")) + "\n"
+    page = escape_outside_code(notion.body.strip("\n")) + "\n"
     if notion.meta.prerequisites:
         parts = [
             f"[{link_text(wiki.notions[p].title)}]({_href(domain, p)})" if p in wiki.notions else p
@@ -112,8 +129,14 @@ def _domain_page(domain: Domain, wiki: Wiki) -> str:
         else f"{i}. {n} — *à rédiger*"
         for i, n in enumerate(domain.index.order, start=1)
     )
-    intro = escape_html(domain.intro.strip())
+    intro = escape_outside_code(domain.intro.strip())
     return f"# {link_text(domain.index.title)}\n\n{intro}\n\n## Ordre de lecture\n\n{entries}\n"
+
+
+def _unreadable_page(path: PurePosixPath, reason: str, text: str) -> str:
+    # Shown verbatim: the site generator would choke on the invalid front-matter otherwise.
+    why = escape_html(" ".join(reason.split()))
+    return f"# {path.as_posix()}\n\n> Page illisible : {why}\n\n{as_code_block(text)}"
 
 
 def _candidates_page(links: WikiLinks, notes: Mapping[ItemId, Note]) -> str:
@@ -132,16 +155,26 @@ def _candidates_page(links: WikiLinks, notes: Mapping[ItemId, Note]) -> str:
 
 def _nav(wiki: Wiki) -> NavEntry:
     domains: list[NavEntry] = []
-    for domain in sorted(wiki.domains.values(), key=lambda d: d.index.title):
-        ordered = [n for n in domain.index.order if n in wiki.notions]
-        rest = sorted(n for n in wiki.notions if n.split("/")[0] == domain.id and n not in ordered)
+    ids = set(wiki.domains) | {n.split("/")[0] for n in wiki.notions}
+    for domain_id in ids:
+        domain = wiki.domains.get(domain_id)
+        # A domain whose index.md is unreadable keeps its notions, in identifier order.
+        order = domain.index.order if domain else ()
+        ordered = [n for n in order if n in wiki.notions]
+        rest = sorted(n for n in wiki.notions if n.split("/")[0] == domain_id and n not in ordered)
         children = (
-            NavEntry(title="Présentation", path=f"wiki/{domain.id}/index.md"),
+            *(
+                [NavEntry(title="Présentation", path=f"wiki/{domain_id}/index.md")]
+                if domain
+                else []
+            ),
             *(
                 NavEntry(title=wiki.notions[n].title, path=f"wiki/{n}.md")
                 for n in [*ordered, *rest]
             ),
         )
-        domains.append(NavEntry(title=domain.index.title, children=children))
+        title = domain.index.title if domain else domain_id
+        domains.append(NavEntry(title=title, children=children))
+    domains.sort(key=lambda entry: entry.title)
     candidates = NavEntry(title="Notions à couvrir", path=CANDIDATES.as_posix())
     return NavEntry(title="Wiki", children=(*domains, candidates))

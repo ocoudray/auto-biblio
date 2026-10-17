@@ -107,3 +107,29 @@ def test_notion_outside_order_and_domain_without_index() -> None:
 def test_broken_wiki_link() -> None:
     page = notion(body="See [x](missing.md) and [kb](../../notes/papers/a.md#x).")
     assert problems({P("llm/attention.md"): page}) == ["llm/attention.md: broken link missing.md"]
+
+
+def test_cycle_check_scales_with_dense_prerequisites() -> None:
+    # Each notion needs its 3 predecessors, and the first needs the last: one cycle.
+    ids = [f"n{i:02d}" for i in range(40)]
+    order = ", ".join(f"big/{i}" for i in ids)
+    files = {P("big/index.md"): f"---\ntitle: Big\norder: [{order}]\n---\n"}
+    for k, i in enumerate(ids):
+        needs = [f"big/{j}" for j in ids[max(0, k - 3) : k]] or [f"big/{ids[-1]}"]
+        files[P(f"big/{i}.md")] = notion(meta=f"prerequisites: [{', '.join(needs)}]\n")
+    found = [str(p) for p in check_wiki(load_wiki(files, []), THEMES)]
+    assert len(found) == 1
+    assert found[0].startswith("big/n00.md: prerequisite cycle: big/n00 → big/n39 → ")
+    assert found[0].endswith(" → big/n00")
+
+
+def test_two_cycles_on_the_same_notions_are_one_problem() -> None:
+    files = {
+        P("llm/embeddings.md"): notion(meta="prerequisites: [llm/attention, llm/transformer]\n"),
+        P("llm/attention.md"): notion(meta="prerequisites: [llm/embeddings, llm/transformer]\n"),
+        P("llm/transformer.md"): notion(meta="prerequisites: [llm/embeddings]\n"),
+    }
+    cycles = [p for p in problems(files) if "cycle" in p]
+    assert cycles == [
+        "llm/attention.md: prerequisite cycle: llm/attention → llm/embeddings → llm/attention"
+    ]
