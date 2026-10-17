@@ -67,6 +67,33 @@ def render_list(values: Sequence[str]) -> str:
     return "\n".join(f"- {clean(value)}" for value in values)
 
 
+def split_front_matter(text: str, origin: str) -> tuple[dict[str, object], str]:
+    """Split a document into its YAML front-matter and the body after it.
+
+    Args:
+        text: The Markdown text.
+        origin: Where the text comes from, for error messages.
+
+    Returns:
+        The front-matter and the body.
+
+    Raises:
+        KBFormatError: If the front-matter is missing or is not a YAML mapping.
+    """
+    if not text.startswith("---\n") or "\n---\n" not in text:
+        raise KBFormatError(origin, "missing YAML front-matter")
+    head, _, rest = text[4:].partition("\n---\n")
+    try:
+        meta: object = yaml.safe_load(head)
+    except yaml.YAMLError as exc:
+        raise KBFormatError(origin, f"invalid front-matter: {exc}") from exc
+    if not isinstance(meta, dict):
+        raise KBFormatError(origin, "front-matter is not a mapping")
+    # yaml.safe_load returns untyped data; the caller validates it with its Pydantic model.
+    mapping = cast("dict[object, object]", meta)
+    return {str(k): v for k, v in mapping.items()}, rest
+
+
 def split_document(text: str, origin: str) -> tuple[dict[str, object], str, dict[str, str]]:
     """Split a document into front-matter, title and section bodies.
 
@@ -80,17 +107,7 @@ def split_document(text: str, origin: str) -> tuple[dict[str, object], str, dict
     Raises:
         KBFormatError: If the front-matter or the title is missing or invalid.
     """
-    if not text.startswith("---\n") or "\n---\n" not in text:
-        raise KBFormatError(origin, "missing YAML front-matter")
-    head, _, rest = text[4:].partition("\n---\n")
-    try:
-        meta: object = yaml.safe_load(head)
-    except yaml.YAMLError as exc:
-        raise KBFormatError(origin, f"invalid front-matter: {exc}") from exc
-    if not isinstance(meta, dict):
-        raise KBFormatError(origin, "front-matter is not a mapping")
-    # yaml.safe_load returns untyped data; the caller validates it with its Pydantic model.
-    mapping = cast("dict[object, object]", meta)
+    meta, rest = split_front_matter(text, origin)
     lines = rest.strip("\n").split("\n")
     if not lines or not lines[0].startswith("# "):
         raise KBFormatError(origin, "missing `# title` line")
@@ -106,7 +123,7 @@ def split_document(text: str, origin: str) -> tuple[dict[str, object], str, dict
             body.append(line)
     if current is not None:
         sections[current] = "\n".join(body).strip("\n")
-    return {str(k): v for k, v in mapping.items()}, lines[0][2:].strip(), sections
+    return meta, lines[0][2:].strip(), sections
 
 
 def parse_list(body: str) -> tuple[str, ...]:
