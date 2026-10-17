@@ -143,7 +143,7 @@ def test_collect_uses_configured_overlap(data_dir: Path) -> None:
 LLM_YAML = """
 models:
   m: {id: "test:m", input_usd_per_mtok: 0, output_usd_per_mtok: 0, batch_size: 10}
-chains: {triage: [m], short_note: [m], deep_analysis: [m], synthesis: [m]}
+chains: {triage: [m], short_note: [m], deep_analysis: [m], synthesis: [m], wiki_link: [m]}
 weekly_budget: {usd: 0, tokens: 1000000}
 """
 
@@ -386,3 +386,21 @@ def test_wiki_check(data_dir: Path) -> None:
     bad = runner.invoke(app_with(), ["wiki", "check", "--data-dir", str(data_dir)])
     assert bad.exit_code == 1
     assert "llm/extra.md: not listed in llm/index.md order" in bad.output
+
+
+def test_wiki_link_command(triage_dir: Path) -> None:
+    runner.invoke(app_with(), ["triage", "--data-dir", str(triage_dir)])
+    runner.invoke(app_with(), ["analyze", "--data-dir", str(triage_dir)])
+    (triage_dir / "wiki/llm").mkdir(parents=True)
+    (triage_dir / "wiki/llm/index.md").write_text(WIKI_INDEX)
+    (triage_dir / "wiki/llm/attention.md").write_text(WIKI_NOTION)
+    result = runner.invoke(app_with(), ["wiki", "link", "--data-dir", str(triage_dir)])
+    assert result.exit_code == 0, result.output
+    assert "wiki link:" in result.output
+    assert (triage_dir / "state/wiki/links.json").exists()
+
+
+def test_wiki_link_without_wiki(data_dir: Path) -> None:
+    result = runner.invoke(app_with(), ["wiki", "link", "--data-dir", str(data_dir)])
+    assert result.exit_code == 0
+    assert "no wiki/ directory" in result.output
