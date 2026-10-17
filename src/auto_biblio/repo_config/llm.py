@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from auto_biblio.domain.errors import ConfigError
 
-Role = Literal["triage", "short_note", "deep_analysis", "synthesis"]
+Role = Literal["triage", "short_note", "deep_analysis", "synthesis", "wiki_link"]
 """What a model is used for."""
 
 LLM_PATH = "config/llm.yaml"
