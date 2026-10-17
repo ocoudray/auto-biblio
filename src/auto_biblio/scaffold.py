@@ -16,7 +16,15 @@ _LAYOUT = {
     "config/analysis.yaml": "analysis.yaml",
     ".github/workflows/daily.yml": "daily.yml",
     ".github/workflows/weekly.yml": "weekly.yml",
+    ".github/workflows/wiki-check.yml": "wiki-check.yml",
     ".gitignore": "gitignore",
+}
+# Destination path -> template copied as is: skills contain `$ARGUMENTS`, not a substitution.
+_VERBATIM = {
+    ".claude/skills/wiki-plan/SKILL.md": "skill_wiki_plan.md",
+    ".claude/skills/wiki-rediger/SKILL.md": "skill_wiki_rediger.md",
+    ".claude/skills/wiki-reprendre/SKILL.md": "skill_wiki_reprendre.md",
+    "wiki/GUIDE.md": "wiki_guide.md",
 }
 _KEEP = ("state/.gitkeep", "kb/.gitkeep")
 
@@ -36,7 +44,7 @@ class ScaffoldExistsError(AutoBiblioError):
 
 
 def scaffold_data_repo(target: Path, version: str) -> list[Path]:
-    """Write the configuration, workflow and state skeleton of a new data repository.
+    """Write the configuration, workflows, wiki skills and state skeleton of a new data repository.
 
     Nothing is written if any destination file already exists.
 
@@ -50,13 +58,15 @@ def scaffold_data_repo(target: Path, version: str) -> list[Path]:
     Raises:
         ScaffoldExistsError: If a destination file already exists.
     """
-    destinations = [target / relative for relative in (*_LAYOUT, *_KEEP)]
+    destinations = [target / relative for relative in (*_LAYOUT, *_VERBATIM, *_KEEP)]
     existing = tuple(path for path in destinations if path.exists())
     if existing:
         raise ScaffoldExistsError(existing)
     for relative, template in _LAYOUT.items():
         content = _TEMPLATES.joinpath(template).read_text(encoding="utf-8")
         _write(target / relative, Template(content).substitute(version=version))
+    for relative, template in _VERBATIM.items():
+        _write(target / relative, _TEMPLATES.joinpath(template).read_text(encoding="utf-8"))
     for keep in _KEEP:
         _write(target / keep, "")
     return destinations

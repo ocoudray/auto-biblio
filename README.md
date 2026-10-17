@@ -22,8 +22,8 @@ Two repositories work together:
   state and the GitHub Actions workflow that runs the collection every day.
 
 ```bash
-uv tool install git+https://github.com/ocoudray/auto-biblio@v0.6.0
-auto-biblio init ~/auto-biblio-data          # writes config/, state/, .github/workflows/
+uv tool install git+https://github.com/ocoudray/auto-biblio@v0.7.0
+auto-biblio init ~/auto-biblio-data          # writes config/, state/, wiki/, workflows, skills
 cd ~/auto-biblio-data && auto-biblio validate-config
 git init -b main && git add -A && git commit -m "chore: init data repository"
 gh repo create <you>/auto-biblio-data --private --source=. --push

@@ -1,3 +1,4 @@
+import shutil
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from importlib.metadata import entry_points
@@ -370,6 +371,7 @@ WIKI_NOTION = (
 
 
 def test_wiki_check_without_wiki(data_dir: Path) -> None:
+    shutil.rmtree(data_dir / "wiki")  # `init` writes wiki/GUIDE.md
     result = runner.invoke(app_with(), ["wiki", "check", "--data-dir", str(data_dir)])
     assert result.exit_code == 0
     assert "no wiki/ directory" in result.output
@@ -401,6 +403,7 @@ def test_wiki_link_command(triage_dir: Path) -> None:
 
 
 def test_wiki_link_without_wiki(data_dir: Path) -> None:
+    shutil.rmtree(data_dir / "wiki")  # `init` writes wiki/GUIDE.md
     result = runner.invoke(app_with(), ["wiki", "link", "--data-dir", str(data_dir)])
     assert result.exit_code == 0
     assert "no wiki/ directory" in result.output

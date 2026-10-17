@@ -32,6 +32,9 @@ auto-biblio validate-config
 | `config/analysis.yaml` | Notes and theme pages (see [Knowledge base](knowledge-base.md)) |
 | `.github/workflows/daily.yml` | Daily collection, signal refresh and feedback ingestion at 05:00 UTC |
 | `.github/workflows/weekly.yml` | Weekly triage, analysis and digest, Sunday 05:30 UTC |
+| `.github/workflows/wiki-check.yml` | Checks every pull request that touches `wiki/` (see [Knowledge wiki](wiki.md)) |
+| `.claude/skills/wiki-*/SKILL.md` | Claude Code skills that plan, draft and revise wiki pages |
+| `wiki/GUIDE.md` | Living style guide of the wiki |
 | `.gitignore`, `state/.gitkeep` | Repository skeleton |
 
 Push it to a **private** GitHub repository: the workflow commits `state/` after each run,
@@ -80,6 +83,8 @@ auto-biblio analyze                      # notes, theme page and changelog in kb
 auto-biblio digest --dry-run digest.html # render without mailing
 auto-biblio digest                       # mail the latest triaged week
 auto-biblio site build --out site        # static site of the knowledge base (see Knowledge-base site)
+auto-biblio wiki check                   # validate wiki/ (see Knowledge wiki)
+auto-biblio wiki link                    # link this week's notes to the wiki notions
 auto-biblio eval scoring                 # fixed vs learned scoring, on reliable labels
 auto-biblio health                       # fail if no triage ran for alert_after_days
 ```

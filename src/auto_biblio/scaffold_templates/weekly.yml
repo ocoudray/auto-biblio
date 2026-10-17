@@ -53,6 +53,10 @@ jobs:
         # A failed analysis must not block the digest: it is sent without the new notes.
         continue-on-error: true
         run: auto-biblio analyze $${WEEK:+--week "$$WEEK"}
+      - name: Wiki link
+        # Links the notes to the wiki notions; a failure leaves them for next week.
+        continue-on-error: true
+        run: auto-biblio wiki link $${WEEK:+--week "$$WEEK"}
       - name: Site build
         id: site_build
         # Like the analysis, the site never blocks the digest; a failure is reported at the end.
