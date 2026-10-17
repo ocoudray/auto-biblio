@@ -6,6 +6,7 @@ from auto_biblio.domain.ids import ItemId
 from auto_biblio.domain.kb.notes import render_note
 from auto_biblio.domain.kb.pages import render_theme_page
 from auto_biblio.domain.website.plan import NavEntry, SiteInputs, plan_site
+from auto_biblio.domain.wiki.links import NoteLinks, WikiLinks
 from auto_biblio.repo_config.profile import Profile
 
 PROFILE = Profile.model_validate(
@@ -93,3 +94,31 @@ def test_empty_base() -> None:
     plan = plan_site(inputs(kb_files={}, digests={}))
     assert len(plan.pages) == 7
     assert [entry.title for entry in plan.nav] == ["Accueil", "Fiches", "Journal", "Digests"]
+
+
+def test_wiki_section_in_the_plan() -> None:
+    index = "---\ntitle: LLM\norder: [llm/attention]\n---\n\nIntro.\n"
+    page = "---\ntitle: Attention\nupdated_at: 2026-10-20\n---\n\n# Attention\n\nR.\n"
+    plan = plan_site(
+        inputs(
+            wiki_files={P("llm/index.md"): index, P("llm/attention.md"): page},
+            wiki_assets={P("llm/img/a.svg"): b"<svg/>"},
+            wiki_links=WikiLinks(
+                notes={ItemId("a:1"): NoteLinks(notions=("llm/attention",), signature="s")}
+            ),
+        )
+    )
+    assert P("wiki/llm/attention.md") in plan.pages
+    assert plan.assets == {P("wiki/llm/img/a.svg"): b"<svg/>"}
+    assert (
+        "> Notions : [Attention](../../wiki/llm/attention.md)"
+        in plan.pages[P("notes/papers/a-1.md")]
+    )
+    assert [e.title for e in plan.nav] == [
+        "Accueil",
+        "Thèmes",
+        "Wiki",
+        "Fiches",
+        "Journal",
+        "Digests",
+    ]

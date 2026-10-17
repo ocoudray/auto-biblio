@@ -71,3 +71,15 @@ def test_theme_page_keeps_its_note_markers_but_not_raw_html() -> None:
     page, _ = theme_page(render_theme_page(hostile) + "<!-- note:a:1 -->\n", "themes/agentic.md")
     assert "<iframe" not in page
     assert "<!-- note:a:1 -->" in page
+
+
+def test_note_page_lists_its_notions() -> None:
+    page, _ = note_page(
+        render_note(make_note("a:1")),
+        "notes/papers/a-1.md",
+        LABELS,
+        notions=(("Attention", "../../wiki/llm/attention.md"),),
+    )
+    lines = page.splitlines()
+    meta = next(i for i, line in enumerate(lines) if line.startswith("> [Source]"))
+    assert lines[meta + 2] == "> Notions : [Attention](../../wiki/llm/attention.md)"

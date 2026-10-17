@@ -371,6 +371,7 @@ def create_app(  # noqa: C901, PLR0915 - one nested function per command keeps t
             ItemStore.open(state),
             AnalysisStore(state),
             builder=services.site_builder(),
+            wiki=WikiStore(root),
         )
         try:
             plan = stage.run(out)
