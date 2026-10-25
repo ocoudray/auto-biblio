@@ -28,3 +28,11 @@ auto-biblio init /tmp/fresh
 As soon as `wiki/` exists (the guide is enough), `wiki link` runs every week: with no notion
 yet, it only collects the concepts the notes use into `state/wiki/candidates.json`, which
 `/wiki-plan` reads. The site shows its wiki section once a domain `index.md` is merged.
+
+## 0.7.1
+
+The `Commit state` step of both workflows now replays its commit on top of `main` before
+pushing, and retries up to three times: a pull request merged while a run is going (a wiki
+page, typically) no longer makes the run lose its state. Replace the `Commit state` step of
+`daily.yml` and `weekly.yml` by the one `auto-biblio init /tmp/fresh` writes, and pin
+`@v0.7.1`.
