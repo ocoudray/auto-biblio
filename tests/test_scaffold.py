@@ -202,3 +202,15 @@ def test_wiki_link_chain(tmp_path: Path) -> None:
         "google:gemini-3.1-flash-lite",
         "google:gemma-4-31b-it",
     ]
+
+
+@pytest.mark.parametrize("workflow", ["daily.yml", "weekly.yml"])
+def test_state_commit_replays_on_a_moved_branch(tmp_path: Path, workflow: str) -> None:
+    # A wiki PR merged during the run must not lose the run's state.
+    scaffold_data_repo(tmp_path, "1.2.3")
+    raw = yaml.safe_load((tmp_path / ".github/workflows" / workflow).read_text())
+    steps = next(iter(raw["jobs"].values()))["steps"]
+    run = str(next(s for s in steps if s.get("name") == "Commit state")["run"])
+    assert run.index("git pull --rebase") < run.index("git push")
+    assert "for attempt in 1 2 3" in run
+    assert "git rebase --abort" in run
