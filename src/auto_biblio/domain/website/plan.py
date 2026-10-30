@@ -41,7 +41,7 @@ class SiteInputs(BaseModel):
     wiki_files: dict[PurePosixPath, str] = {}
     """Markdown files of `wiki/`, relative to it."""
     wiki_assets: dict[PurePosixPath, bytes] = {}
-    """Figures of `wiki/`, relative to it."""
+    """Figures and notebooks of `wiki/`, relative to it."""
     wiki_links: WikiLinks = WikiLinks()
 
 
@@ -55,7 +55,7 @@ class SitePlan(BaseModel):
     nav: tuple[NavEntry, ...]
     warnings: tuple[str, ...] = ()
     assets: dict[PurePosixPath, bytes] = {}
-    """Binary files (figures), relative to the site's sources."""
+    """Binary files (figures, notebooks), relative to the site's sources."""
 
 
 def plan_site(inputs: SiteInputs) -> SitePlan:

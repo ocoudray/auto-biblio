@@ -80,6 +80,9 @@ def test_stage_publishes_the_wiki(tmp_path: Path) -> None:
         "---\ntitle: Attention\nupdated_at: 2026-10-20\n---\n\n# Attention\n\nR.\n"
     )
     (domain / "img" / "a.svg").write_bytes(b"<svg/>")
+    (domain / "code").mkdir()
+    (domain / "code" / "a.ipynb").write_bytes(b"{}")
+    (domain / "code" / "a.py").write_bytes(b"print()")
     wiki = WikiStore(tmp_path)
     wiki.write_links(
         WikiLinks(notes={make_item().id: NoteLinks(notions=("llm/attention",), signature="s")})
@@ -87,6 +90,9 @@ def test_stage_publishes_the_wiki(tmp_path: Path) -> None:
     stage, _ = seeded(tmp_path, wiki=wiki)
     plan = stage.run(tmp_path / "out")
     assert PurePosixPath("wiki/llm/attention.md") in plan.pages
-    assert plan.assets == {PurePosixPath("wiki/llm/img/a.svg"): b"<svg/>"}
+    assert plan.assets == {
+        PurePosixPath("wiki/llm/img/a.svg"): b"<svg/>",
+        PurePosixPath("wiki/llm/code/a.ipynb"): b"{}",
+    }
     note = plan.pages[PurePosixPath("notes/papers/arxiv-2410.12345.md")]
     assert "> Notions : [Attention](../../wiki/llm/attention.md)" in note

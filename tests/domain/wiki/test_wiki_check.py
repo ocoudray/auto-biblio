@@ -109,6 +109,13 @@ def test_broken_wiki_link() -> None:
     assert problems({P("llm/attention.md"): page}) == ["llm/attention.md: broken link missing.md"]
 
 
+def test_notebook_links() -> None:
+    page = notion(body="[Ok](code/a.ipynb), [cassé](code/b.ipynb), [ailleurs](../../c.ipynb).")
+    assert problems({P("llm/attention.md"): page}, ("llm/code/a.ipynb",)) == [
+        "llm/attention.md: broken link code/b.ipynb"
+    ]
+
+
 def test_cycle_check_scales_with_dense_prerequisites() -> None:
     # Each notion needs its 3 predecessors, and the first needs the last: one cycle.
     ids = [f"n{i:02d}" for i in range(40)]

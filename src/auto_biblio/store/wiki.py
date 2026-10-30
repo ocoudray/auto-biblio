@@ -43,17 +43,19 @@ class WikiStore:
         }
 
     def assets(self) -> dict[PurePosixPath, bytes]:
-        """Return the figures of the wiki (`<domain>/img/*.svg|png`).
+        """Return the published files of the wiki: figures and notebooks.
+
+        Figures are `<domain>/img/*.svg|png`, notebooks `<domain>/code/*.ipynb`.
 
         Returns:
             Contents by path relative to `wiki/`.
         """
         if not self.exists():
             return {}
+        figures = (p for p in self._root.glob("*/img/*") if p.suffix in FIGURE_SUFFIXES)
         return {
             PurePosixPath(path.relative_to(self._root).as_posix()): path.read_bytes()
-            for path in sorted(self._root.glob("*/img/*"))
-            if path.suffix in FIGURE_SUFFIXES
+            for path in sorted((*figures, *self._root.glob("*/code/*.ipynb")))
         }
 
     def read_links(self) -> WikiLinks:
