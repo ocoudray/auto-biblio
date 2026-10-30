@@ -144,7 +144,7 @@ def load_wiki(files: Mapping[PurePosixPath, str], assets: Iterable[PurePosixPath
     Args:
         files: Markdown files, by path relative to `wiki/`. `<d>/index.md` is a domain,
             `<d>/<n>.md` a notion; anything else (`GUIDE.md`, deeper files) is ignored.
-        assets: Figure files, relative to `wiki/`.
+        assets: Figures and notebooks, relative to `wiki/`.
 
     Returns:
         The wiki; pages that cannot be read are listed in `unreadable`.

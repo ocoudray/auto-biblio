@@ -47,6 +47,8 @@ s'il y en a. Garde la liste des pages consultées pour la description de la PR. 
   provenance (« Figure originale. » ou « Source : <auteur, lien>, <licence>. »). Une figure
   tierce n'est reprise que sous licence ouverte ; sinon, schéma original légendé
   « Figure originale, d'après <source>. » (`wiki check` exige « Figure originale » ou « Source : »).
+- Notebook à télécharger, s'il aide : `wiki/<domaine>/code/<nom>.ipynb`, lié depuis la page par
+  `[notebook](code/<nom>.ipynb)`. Le site ne publie de `code/` que les `.ipynb`.
 
 ## 5. Vérifier
 
@@ -57,7 +59,7 @@ auto-biblio site build --out /tmp/site
 
 Corrige jusqu'à ce que `wiki check` ne signale plus rien pour cette page et que le site se
 construise. Relis la page rendue (`/tmp/site/wiki/<domaine>/<notion>/index.html`) : équations,
-diagrammes et figures s'affichent.
+diagrammes et figures s'affichent, le lien du notebook éventuel le télécharge.
 
 ## 6. Ouvrir la PR
 

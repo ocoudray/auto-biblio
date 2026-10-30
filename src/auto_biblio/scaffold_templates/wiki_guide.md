@@ -83,6 +83,15 @@ Les sections 2 à 6 sont omises quand elles n'ont pas lieu d'être.
   « Source : <auteur, lien>, <licence> » dans la légende. Sinon : schéma original inspiré de la
   source, légendé « Figure originale, d'après <source> », ou simple lien.
 
+## Notebooks
+
+- Un notebook se propose au téléchargement par un lien relatif depuis la page :
+  `[notebook](code/<nom>.ipynb)`.
+- Le site publie `wiki/<domaine>/code/*.ipynb` et rien d'autre de `code/` (`.py`, `.json`,
+  `.pt`…). `wiki check` signale un lien vers un notebook absent.
+- Tout ce qui est publié est visible par qui ouvre le site : ni secret ni donnée privée dans le
+  notebook, sorties comprises.
+
 ## Règles issues des relectures
 
 <!-- Ajoutées par /wiki-reprendre, une par remarque généralisable, avec son exemple. -->

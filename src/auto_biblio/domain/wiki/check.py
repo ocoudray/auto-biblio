@@ -12,7 +12,7 @@ from auto_biblio.domain.wiki.pages import INDEX, Notion, Wiki
 
 REFERENCES = "Références fondatrices"
 _IMAGE = re.compile(r"!\[[^\]]*\]\(([^)\s]+)\)")
-_LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)\s#]+\.md)(?:#[^)]*)?\)")
+_LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)\s#]+\.(?:md|ipynb))(?:#[^)]*)?\)")
 _CAPTION_MARKERS = ("Figure originale", "Source :")
 
 
@@ -124,11 +124,12 @@ def _check_images(notion: Notion, wiki: Wiki, origin: str) -> Iterator[Problem]:
 
 def _check_links(notion: Notion, wiki: Wiki, origin: str) -> Iterator[Problem]:
     pages = {_file(n) for n in wiki.notions} | {f"{d}/{INDEX}" for d in wiki.domains}
+    assets = wiki.assets
     for target in _LINK.findall(notion.body):
         if "://" in target:
             continue
         resolved = _resolve(notion, target)
-        if resolved is not None and resolved not in pages:
+        if resolved is not None and resolved not in pages and PurePosixPath(resolved) not in assets:
             yield Problem(origin=origin, message=f"broken link {target}")
 
 

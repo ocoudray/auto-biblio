@@ -23,6 +23,19 @@ def test_files_and_assets(tmp_path: Path) -> None:
     assert store.assets() == {PurePosixPath("llm/img/w.svg"): b"<svg/>"}
 
 
+def test_assets_include_notebooks_only_from_code(tmp_path: Path) -> None:
+    code = tmp_path / "wiki/llm/code"
+    (code / ".ipynb_checkpoints").mkdir(parents=True)
+    (code / "t.ipynb").write_bytes(b"{}")
+    (code / ".ipynb_checkpoints/t-checkpoint.ipynb").write_bytes(b"{}")
+    for name in ("t.py", "t.json", "t.pt"):
+        (code / name).write_bytes(b"x")
+    (tmp_path / "wiki/llm/elsewhere.ipynb").write_bytes(b"{}")
+    (tmp_path / "wiki/llm/img").mkdir()
+    (tmp_path / "wiki/llm/img/t.ipynb").write_bytes(b"{}")
+    assert WikiStore(tmp_path).assets() == {PurePosixPath("llm/code/t.ipynb"): b"{}"}
+
+
 def test_links_round_trip(tmp_path: Path) -> None:
     store = WikiStore(tmp_path)
     assert store.read_links() == WikiLinks()

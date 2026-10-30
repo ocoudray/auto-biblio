@@ -1,3 +1,4 @@
+import re
 import tomllib
 from pathlib import Path, PurePosixPath
 
@@ -132,6 +133,36 @@ def test_build_renders_math_mermaid_and_figures(tmp_path: Path) -> None:
     assert "<table>" in html
     assert (out / "javascripts/mathjax.js").exists()
     assert (out / "wiki/llm/img/a.svg").read_bytes().startswith(b"<svg")
+
+
+def test_build_serves_a_notebook_linked_from_a_notion(tmp_path: Path) -> None:
+    index = "---\ntitle: LLM\norder: [llm/attention]\n---\n\nI.\n"
+    page = (
+        "---\ntitle: Attention\nupdated_at: 2026-10-20\n---\n\n"
+        "# Attention\n\nR.\n\n[Le notebook](code/a.ipynb)\n"
+    )
+    notebook = b'{"cells": [], "nbformat": 4, "nbformat_minor": 5, "metadata": {}}'
+    plan = plan_site(
+        SiteInputs(
+            title="Veille IA",
+            profile=PROFILE,
+            kb_files={},
+            digests={},
+            wiki_files={
+                PurePosixPath("llm/index.md"): index,
+                PurePosixPath("llm/attention.md"): page,
+            },
+            wiki_assets={PurePosixPath("llm/code/a.ipynb"): notebook},
+        )
+    )
+    out = tmp_path / "out"
+    SiteBuilder(strict=True).build(plan, "Veille IA", out)
+    assert (out / "wiki/llm/code/a.ipynb").read_bytes() == notebook
+    assert not (out / "wiki/llm/code/a/index.html").exists()
+    rendered = out / "wiki/llm/attention/index.html"
+    href = re.search(r'href="([^"]+)"[^>]*>Le notebook<', rendered.read_text(encoding="utf-8"))
+    assert href is not None
+    assert (rendered.parent / href[1]).resolve() == (out / "wiki/llm/code/a.ipynb").resolve()
 
 
 def test_build_survives_a_broken_wiki_page_and_keeps_code(tmp_path: Path) -> None:

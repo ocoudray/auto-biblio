@@ -17,7 +17,8 @@ wiki/
 └── llm/
     ├── index.md             domain title, reading order, introduction
     ├── attention.md         one notion
-    └── img/                 figures, and the scripts that draw them
+    ├── img/                 figures, and the scripts that draw them
+    └── code/                notebooks published with the site, and their sources
 ```
 
 - A notion's identifier is its path without extension: `llm/attention`
@@ -69,6 +70,14 @@ Every image has an alt text and, on the next line, an italic caption that states
 comes from: *Figure originale* or *Source : author, link, licence*. A third-party figure is
 reused only under an open licence; otherwise the page draws an original diagram "d'après" the
 source, or links to it. Equations are LaTeX (`$…$`, `$$…$$`) and render with MathJax.
+
+### Notebooks
+
+A page offers a notebook to download with a relative link: `[notebook](code/<name>.ipynb)`.
+The site publishes `wiki/<domain>/code/*.ipynb` and nothing else from `code/` (`.py`, `.json`,
+`.pt`...), and `wiki check` reports a link to a notebook that does not exist. Everything
+published is public to whoever can open the site: keep secrets and private data out of the
+notebook, its outputs included.
 
 ## The review loop
 
@@ -130,4 +139,5 @@ The [site](site.md) has a **Wiki** section: one menu per domain (its introductio
 notions in reading order) and a **Notions à couvrir** page listing the candidates, most cited
 first. A notion page shows its *Prérequis* under the title and, before *Mes notes*, the
 *Nouveautés suivies*: the linked notes, newest first. Each note shows a *Notions* line linking
-to its notions. Equations, Mermaid diagrams and figures are rendered.
+to its notions. Equations, Mermaid diagrams and figures are rendered, and notebooks can be
+downloaded.
